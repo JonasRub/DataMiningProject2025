@@ -10,6 +10,6 @@
 ### helper_KMv2.py
 - **Purpose:** Contains transformer functions for **data cleaning** and **data preprocessing**.  
 - **Content:**  
-  - Implements reusable transformer classes (e.g., scaling, outlier detection, encoding)  
+  - Implements reusable transformer classes (e.g., outlier detection, encoding)  
   - Designed to integrate smoothly into sklearn pipelines  
   - Provides modular preprocessing logic for experiments
