@@ -1,0 +1,186 @@
+-main> python .\model_pipeline_no_AI.py
+Baseline model prediction (majority class): 0
+Baseline model accuracy: 0.6327211163554278
+Training Random Forest...
+
+Outer Fold 1/5
+  Testing parameters 1/5: {'n_estimators': 50, 'max_depth': None, 'min_samples_split': 2}
+    Average inner CV score: 0.6929
+    New best parameters found! Score: 0.6929
+  Testing parameters 2/5: {'n_estimators': 100, 'max_depth': 10, 'min_samples_split': 5}
+    Average inner CV score: 0.6731
+  Testing parameters 3/5: {'n_estimators': 200, 'max_depth': 20, 'min_samples_split': 10}
+    Average inner CV score: 0.7050
+    New best parameters found! Score: 0.7050
+  Testing parameters 4/5: {'n_estimators': 100, 'max_depth': None, 'min_samples_split': 2}
+    Average inner CV score: 0.7019
+  Testing parameters 5/5: {'n_estimators': 150, 'max_depth': 15, 'min_samples_split': 3}
+    Average inner CV score: 0.7021
+
+Outer Fold 2/5
+  Testing parameters 1/5: {'n_estimators': 50, 'max_depth': None, 'min_samples_split': 2}
+    Average inner CV score: 0.6825
+    New best parameters found! Score: 0.6825
+  Testing parameters 2/5: {'n_estimators': 100, 'max_depth': 10, 'min_samples_split': 5}
+    Average inner CV score: 0.6633
+  Testing parameters 3/5: {'n_estimators': 200, 'max_depth': 20, 'min_samples_split': 10}
+    Average inner CV score: 0.6925
+    New best parameters found! Score: 0.6925
+  Testing parameters 4/5: {'n_estimators': 100, 'max_depth': None, 'min_samples_split': 2}
+    Average inner CV score: 0.6907
+  Testing parameters 5/5: {'n_estimators': 150, 'max_depth': 15, 'min_samples_split': 3}
+    Average inner CV score: 0.6943
+    New best parameters found! Score: 0.6943
+
+Outer Fold 3/5
+  Testing parameters 1/5: {'n_estimators': 50, 'max_depth': None, 'min_samples_split': 2}
+    Average inner CV score: 0.6917
+    New best parameters found! Score: 0.6917
+  Testing parameters 2/5: {'n_estimators': 100, 'max_depth': 10, 'min_samples_split': 5}
+    Average inner CV score: 0.6739
+  Testing parameters 3/5: {'n_estimators': 200, 'max_depth': 20, 'min_samples_split': 10}
+    Average inner CV score: 0.7009
+    New best parameters found! Score: 0.7009
+  Testing parameters 4/5: {'n_estimators': 100, 'max_depth': None, 'min_samples_split': 2}
+    Average inner CV score: 0.7009
+    New best parameters found! Score: 0.7009
+  Testing parameters 5/5: {'n_estimators': 150, 'max_depth': 15, 'min_samples_split': 3}
+    Average inner CV score: 0.6979
+
+Outer Fold 4/5
+  Testing parameters 1/5: {'n_estimators': 50, 'max_depth': None, 'min_samples_split': 2}
+    Average inner CV score: 0.6925
+    New best parameters found! Score: 0.6925
+  Testing parameters 2/5: {'n_estimators': 100, 'max_depth': 10, 'min_samples_split': 5}
+    Average inner CV score: 0.6740
+  Testing parameters 3/5: {'n_estimators': 200, 'max_depth': 20, 'min_samples_split': 10}
+    Average inner CV score: 0.7035
+    New best parameters found! Score: 0.7035
+  Testing parameters 4/5: {'n_estimators': 100, 'max_depth': None, 'min_samples_split': 2}
+    Average inner CV score: 0.7054
+    New best parameters found! Score: 0.7054
+  Testing parameters 5/5: {'n_estimators': 150, 'max_depth': 15, 'min_samples_split': 3}
+    Average inner CV score: 0.7039
+
+Outer Fold 5/5
+  Testing parameters 1/5: {'n_estimators': 50, 'max_depth': None, 'min_samples_split': 2}
+    Average inner CV score: 0.6885
+    New best parameters found! Score: 0.6885
+  Testing parameters 2/5: {'n_estimators': 100, 'max_depth': 10, 'min_samples_split': 5}
+    Average inner CV score: 0.6705
+  Testing parameters 3/5: {'n_estimators': 200, 'max_depth': 20, 'min_samples_split': 10}
+    Average inner CV score: 0.6997
+    New best parameters found! Score: 0.6997
+  Testing parameters 4/5: {'n_estimators': 100, 'max_depth': None, 'min_samples_split': 2}
+    Average inner CV score: 0.6973
+  Testing parameters 5/5: {'n_estimators': 150, 'max_depth': 15, 'min_samples_split': 3}
+    Average inner CV score: 0.6988
+Training Logistic Regression...
+
+Outer Fold 1/5
+  Testing parameters 1/5: {'C': 0.1, 'penalty': 'l2', 'solver': 'liblinear'}
+    Average inner CV score: 0.5819
+    New best parameters found! Score: 0.5819
+  Testing parameters 2/5: {'C': 1.0, 'penalty': 'l2', 'solver': 'liblinear'}
+    Average inner CV score: 0.5968
+    New best parameters found! Score: 0.5968
+  Testing parameters 3/5: {'C': 10.0, 'penalty': 'l2', 'solver': 'liblinear'}
+    Average inner CV score: 0.6017
+    New best parameters found! Score: 0.6017
+  Testing parameters 4/5: {'C': 0.1, 'penalty': 'l1', 'solver': 'liblinear'}
+    Average inner CV score: 0.5989
+  Testing parameters 5/5: {'C': 1.0, 'penalty': 'l1', 'solver': 'liblinear'}
+    Average inner CV score: 0.6032
+    New best parameters found! Score: 0.6032
+
+Outer Fold 2/5
+  Testing parameters 1/5: {'C': 0.1, 'penalty': 'l2', 'solver': 'liblinear'}
+    Average inner CV score: 0.5762
+    New best parameters found! Score: 0.5762
+  Testing parameters 2/5: {'C': 1.0, 'penalty': 'l2', 'solver': 'liblinear'}
+    Average inner CV score: 0.5901
+    New best parameters found! Score: 0.5901
+  Testing parameters 3/5: {'C': 10.0, 'penalty': 'l2', 'solver': 'liblinear'}
+    Average inner CV score: 0.5945
+    New best parameters found! Score: 0.5945
+  Testing parameters 4/5: {'C': 0.1, 'penalty': 'l1', 'solver': 'liblinear'}
+    Average inner CV score: 0.5914
+  Testing parameters 5/5: {'C': 1.0, 'penalty': 'l1', 'solver': 'liblinear'}
+    Average inner CV score: 0.5953
+    New best parameters found! Score: 0.5953
+
+Outer Fold 3/5
+  Testing parameters 1/5: {'C': 0.1, 'penalty': 'l2', 'solver': 'liblinear'}
+    Average inner CV score: 0.5796
+    New best parameters found! Score: 0.5796
+  Testing parameters 2/5: {'C': 1.0, 'penalty': 'l2', 'solver': 'liblinear'}
+    Average inner CV score: 0.5963
+    New best parameters found! Score: 0.5963
+  Testing parameters 3/5: {'C': 10.0, 'penalty': 'l2', 'solver': 'liblinear'}
+    Average inner CV score: 0.5989
+    New best parameters found! Score: 0.5989
+  Testing parameters 4/5: {'C': 0.1, 'penalty': 'l1', 'solver': 'liblinear'}
+    Average inner CV score: 0.5973
+  Testing parameters 5/5: {'C': 1.0, 'penalty': 'l1', 'solver': 'liblinear'}
+    Average inner CV score: 0.5987
+
+Outer Fold 4/5
+  Testing parameters 1/5: {'C': 0.1, 'penalty': 'l2', 'solver': 'liblinear'}
+    Average inner CV score: 0.5837
+    New best parameters found! Score: 0.5837
+  Testing parameters 2/5: {'C': 1.0, 'penalty': 'l2', 'solver': 'liblinear'}
+    Average inner CV score: 0.5998
+    New best parameters found! Score: 0.5998
+  Testing parameters 3/5: {'C': 10.0, 'penalty': 'l2', 'solver': 'liblinear'}
+    Average inner CV score: 0.6042
+    New best parameters found! Score: 0.6042
+  Testing parameters 4/5: {'C': 0.1, 'penalty': 'l1', 'solver': 'liblinear'}
+    Average inner CV score: 0.6014
+  Testing parameters 5/5: {'C': 1.0, 'penalty': 'l1', 'solver': 'liblinear'}
+    Average inner CV score: 0.6055
+    New best parameters found! Score: 0.6055
+
+Outer Fold 5/5
+  Testing parameters 1/5: {'C': 0.1, 'penalty': 'l2', 'solver': 'liblinear'}
+    Average inner CV score: 0.5812
+    New best parameters found! Score: 0.5812
+  Testing parameters 2/5: {'C': 1.0, 'penalty': 'l2', 'solver': 'liblinear'}
+    Average inner CV score: 0.5957
+    New best parameters found! Score: 0.5957
+  Testing parameters 3/5: {'C': 10.0, 'penalty': 'l2', 'solver': 'liblinear'}
+    Average inner CV score: 0.6016
+    New best parameters found! Score: 0.6016
+  Testing parameters 4/5: {'C': 0.1, 'penalty': 'l1', 'solver': 'liblinear'}
+    Average inner CV score: 0.5981
+  Testing parameters 5/5: {'C': 1.0, 'penalty': 'l1', 'solver': 'liblinear'}
+    Average inner CV score: 0.6018
+    New best parameters found! Score: 0.6018
+
+==================================================
+NESTED CROSS-VALIDATION RESULTS
+==================================================
+
+RANDOM FOREST:
+Mean Accuracy: 0.7971
+Fold Accuracies: ['0.7943', '0.7995', '0.8021', '0.7966', '0.7928']
+Best Parameters per Outer Fold:
+  Fold 1: {'n_estimators': 200, 'max_depth': 20, 'min_samples_split': 10}
+  Fold 2: {'n_estimators': 150, 'max_depth': 15, 'min_samples_split': 3}
+  Fold 3: {'n_estimators': 100, 'max_depth': None, 'min_samples_split': 2}
+  Fold 4: {'n_estimators': 100, 'max_depth': None, 'min_samples_split': 2}
+  Fold 5: {'n_estimators': 200, 'max_depth': 20, 'min_samples_split': 10}
+
+LOGISTIC REGRESSION:
+Mean Accuracy: 0.7234
+Fold Accuracies: ['0.7263', '0.7258', '0.7262', '0.7177', '0.7209']
+Best Parameters per Outer Fold:
+  Fold 1: {'C': 1.0, 'penalty': 'l1', 'solver': 'liblinear'}
+  Fold 2: {'C': 1.0, 'penalty': 'l1', 'solver': 'liblinear'}
+  Fold 3: {'C': 10.0, 'penalty': 'l2', 'solver': 'liblinear'}
+  Fold 4: {'C': 1.0, 'penalty': 'l1', 'solver': 'liblinear'}
+  Fold 5: {'C': 1.0, 'penalty': 'l1', 'solver': 'liblinear'}
+
+COMPARISON:
+Random Forest:    0.7971
+Logistic Regression: 0.7234
+Random Forest performs better
