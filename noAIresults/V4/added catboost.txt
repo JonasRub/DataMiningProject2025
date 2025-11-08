@@ -1,9 +1,329 @@
-y
 Baseline model prediction (majority class): 0
 Baseline model accuracy: 0.6327211163554278
 📁 Created results directory: nested_cross_validation_noAI_results
 🚀 STARTING NESTED CROSS-VALIDATION FOR BOTH MODELS
 ======================================================================
+
+============================================================
+STARTING NESTED CV FOR: CATBOOST
+============================================================
+
+📁 OUTER FOLD 1/5
+   Training samples: 31187, Test samples: 7797
+   🔍 Inner CV - Testing 5 parameter sets...
+      Testing parameter set 1/5: {'iterations': 100, 'depth': 6, 'learning_rate': 0.1, 'l2_leaf_reg': 3}
+         Inner Fold 1/3: Accuracy = 0.7503
+         Inner Fold 2/3: Accuracy = 0.7547
+         Inner Fold 3/3: Accuracy = 0.7581
+      ✅ Parameter set 1 - Mean Inner CV Score: 0.7544
+      🎯 NEW BEST: {'iterations': 100, 'depth': 6, 'learning_rate': 0.1, 'l2_leaf_reg': 3} (Score: 0.7544)
+      Testing parameter set 2/5: {'iterations': 200, 'depth': 8, 'learning_rate': 0.05, 'l2_leaf_reg': 5}
+         Inner Fold 1/3: Accuracy = 0.7568
+         Inner Fold 2/3: Accuracy = 0.7640
+         Inner Fold 3/3: Accuracy = 0.7650
+      ✅ Parameter set 2 - Mean Inner CV Score: 0.7620
+      🎯 NEW BEST: {'iterations': 200, 'depth': 8, 'learning_rate': 0.05, 'l2_leaf_reg': 5} (Score: 0.7620)
+      Testing parameter set 3/5: {'iterations': 150, 'depth': 10, 'learning_rate': 0.01, 'l2_leaf_reg': 7}
+         Inner Fold 1/3: Accuracy = 0.7443
+         Inner Fold 2/3: Accuracy = 0.7505
+         Inner Fold 3/3: Accuracy = 0.7549
+      ✅ Parameter set 3 - Mean Inner CV Score: 0.7499
+      Testing parameter set 4/5: {'iterations': 250, 'depth': 6, 'learning_rate': 0.1, 'l2_leaf_reg': 3}
+         Inner Fold 1/3: Accuracy = 0.7580
+         Inner Fold 2/3: Accuracy = 0.7619
+         Inner Fold 3/3: Accuracy = 0.7640
+      ✅ Parameter set 4 - Mean Inner CV Score: 0.7613
+      Testing parameter set 5/5: {'iterations': 300, 'depth': 8, 'learning_rate': 0.05, 'l2_leaf_reg': 5}
+         Inner Fold 1/3: Accuracy = 0.7614
+         Inner Fold 2/3: Accuracy = 0.7642
+         Inner Fold 3/3: Accuracy = 0.7675
+      ✅ Parameter set 5 - Mean Inner CV Score: 0.7644
+      🎯 NEW BEST: {'iterations': 300, 'depth': 8, 'learning_rate': 0.05, 'l2_leaf_reg': 5} (Score: 0.7644)
+
+   🏆 Selected best parameters for Outer Fold 1:
+      {'iterations': 300, 'depth': 8, 'learning_rate': 0.05, 'l2_leaf_reg': 5}
+      Best Inner CV Score: 0.7644
+   🚀 Training final model with best parameters on full training set...
+
+   📊 Outer Fold 1 Test Results:
+      Accuracy:  0.7712
+      Precision: 0.7738
+      Recall:    0.7712
+      F1-Score:  0.7723
+
+      Detailed Classification Report:
+                      precision    recall  f1-score   support
+
+                   0       0.83      0.81      0.82      4975
+                   1       0.68      0.71      0.69      2822
+
+            accuracy                           0.77      7797
+           macro avg       0.75      0.76      0.75      7797
+        weighted avg       0.77      0.77      0.77      7797
+
+      Confusion Matrix:
+        [[4018  957]
+ [ 827 1995]]
+      AUC:       0.8479
+   ✅ Outer Fold 1 completed
+   ──────────────────────────────────────────────────
+
+📁 OUTER FOLD 2/5
+   Training samples: 31187, Test samples: 7797
+   🔍 Inner CV - Testing 5 parameter sets...
+      Testing parameter set 1/5: {'iterations': 100, 'depth': 6, 'learning_rate': 0.1, 'l2_leaf_reg': 3}
+         Inner Fold 1/3: Accuracy = 0.7560
+         Inner Fold 2/3: Accuracy = 0.7533
+         Inner Fold 3/3: Accuracy = 0.7606
+      ✅ Parameter set 1 - Mean Inner CV Score: 0.7566
+      🎯 NEW BEST: {'iterations': 100, 'depth': 6, 'learning_rate': 0.1, 'l2_leaf_reg': 3} (Score: 0.7566)
+      Testing parameter set 2/5: {'iterations': 200, 'depth': 8, 'learning_rate': 0.05, 'l2_leaf_reg': 5}
+         Inner Fold 1/3: Accuracy = 0.7602
+         Inner Fold 2/3: Accuracy = 0.7590
+         Inner Fold 3/3: Accuracy = 0.7622
+      ✅ Parameter set 2 - Mean Inner CV Score: 0.7605
+      🎯 NEW BEST: {'iterations': 200, 'depth': 8, 'learning_rate': 0.05, 'l2_leaf_reg': 5} (Score: 0.7605)
+      Testing parameter set 3/5: {'iterations': 150, 'depth': 10, 'learning_rate': 0.01, 'l2_leaf_reg': 7}
+         Inner Fold 1/3: Accuracy = 0.7437
+         Inner Fold 2/3: Accuracy = 0.7473
+         Inner Fold 3/3: Accuracy = 0.7502
+      ✅ Parameter set 3 - Mean Inner CV Score: 0.7471
+      Testing parameter set 4/5: {'iterations': 250, 'depth': 6, 'learning_rate': 0.1, 'l2_leaf_reg': 3}
+         Inner Fold 1/3: Accuracy = 0.7595
+         Inner Fold 2/3: Accuracy = 0.7570
+         Inner Fold 3/3: Accuracy = 0.7640
+      ✅ Parameter set 4 - Mean Inner CV Score: 0.7602
+      Testing parameter set 5/5: {'iterations': 300, 'depth': 8, 'learning_rate': 0.05, 'l2_leaf_reg': 5}
+         Inner Fold 1/3: Accuracy = 0.7626
+         Inner Fold 2/3: Accuracy = 0.7598
+         Inner Fold 3/3: Accuracy = 0.7633
+      ✅ Parameter set 5 - Mean Inner CV Score: 0.7619
+      🎯 NEW BEST: {'iterations': 300, 'depth': 8, 'learning_rate': 0.05, 'l2_leaf_reg': 5} (Score: 0.7619)
+
+   🏆 Selected best parameters for Outer Fold 2:
+      {'iterations': 300, 'depth': 8, 'learning_rate': 0.05, 'l2_leaf_reg': 5}
+      Best Inner CV Score: 0.7619
+   🚀 Training final model with best parameters on full training set...
+
+   📊 Outer Fold 2 Test Results:
+      Accuracy:  0.7772
+      Precision: 0.7764
+      Recall:    0.7772
+      F1-Score:  0.7768
+
+      Detailed Classification Report:
+                      precision    recall  f1-score   support
+
+                   0       0.82      0.83      0.82      4874
+                   1       0.71      0.69      0.70      2923
+
+            accuracy                           0.78      7797
+           macro avg       0.76      0.76      0.76      7797
+        weighted avg       0.78      0.78      0.78      7797
+
+      Confusion Matrix:
+        [[4033  841]
+ [ 896 2027]]
+      AUC:       0.8554
+   ✅ Outer Fold 2 completed
+   ──────────────────────────────────────────────────
+
+📁 OUTER FOLD 3/5
+   Training samples: 31187, Test samples: 7797
+   🔍 Inner CV - Testing 5 parameter sets...
+      Testing parameter set 1/5: {'iterations': 100, 'depth': 6, 'learning_rate': 0.1, 'l2_leaf_reg': 3}
+         Inner Fold 1/3: Accuracy = 0.7591
+         Inner Fold 2/3: Accuracy = 0.7548
+         Inner Fold 3/3: Accuracy = 0.7553
+      ✅ Parameter set 1 - Mean Inner CV Score: 0.7564
+      🎯 NEW BEST: {'iterations': 100, 'depth': 6, 'learning_rate': 0.1, 'l2_leaf_reg': 3} (Score: 0.7564)
+      Testing parameter set 2/5: {'iterations': 200, 'depth': 8, 'learning_rate': 0.05, 'l2_leaf_reg': 5}
+         Inner Fold 1/3: Accuracy = 0.7698
+         Inner Fold 2/3: Accuracy = 0.7604
+         Inner Fold 3/3: Accuracy = 0.7598
+      ✅ Parameter set 2 - Mean Inner CV Score: 0.7633
+      🎯 NEW BEST: {'iterations': 200, 'depth': 8, 'learning_rate': 0.05, 'l2_leaf_reg': 5} (Score: 0.7633)
+      Testing parameter set 3/5: {'iterations': 150, 'depth': 10, 'learning_rate': 0.01, 'l2_leaf_reg': 7}
+         Inner Fold 1/3: Accuracy = 0.7510
+         Inner Fold 2/3: Accuracy = 0.7517
+         Inner Fold 3/3: Accuracy = 0.7445
+      ✅ Parameter set 3 - Mean Inner CV Score: 0.7491
+      Testing parameter set 4/5: {'iterations': 250, 'depth': 6, 'learning_rate': 0.1, 'l2_leaf_reg': 3}
+         Inner Fold 1/3: Accuracy = 0.7611
+         Inner Fold 2/3: Accuracy = 0.7627
+         Inner Fold 3/3: Accuracy = 0.7611
+      ✅ Parameter set 4 - Mean Inner CV Score: 0.7616
+      Testing parameter set 5/5: {'iterations': 300, 'depth': 8, 'learning_rate': 0.05, 'l2_leaf_reg': 5}
+         Inner Fold 1/3: Accuracy = 0.7723
+         Inner Fold 2/3: Accuracy = 0.7623
+         Inner Fold 3/3: Accuracy = 0.7652
+      ✅ Parameter set 5 - Mean Inner CV Score: 0.7666
+      🎯 NEW BEST: {'iterations': 300, 'depth': 8, 'learning_rate': 0.05, 'l2_leaf_reg': 5} (Score: 0.7666)
+
+   🏆 Selected best parameters for Outer Fold 3:
+      {'iterations': 300, 'depth': 8, 'learning_rate': 0.05, 'l2_leaf_reg': 5}
+      Best Inner CV Score: 0.7666
+   🚀 Training final model with best parameters on full training set...
+
+   📊 Outer Fold 3 Test Results:
+      Accuracy:  0.7700
+      Precision: 0.7707
+      Recall:    0.7700
+      F1-Score:  0.7704
+
+      Detailed Classification Report:
+                      precision    recall  f1-score   support
+
+                   0       0.82      0.81      0.82      4938
+                   1       0.68      0.69      0.69      2859
+
+            accuracy                           0.77      7797
+           macro avg       0.75      0.75      0.75      7797
+        weighted avg       0.77      0.77      0.77      7797
+
+      Confusion Matrix:
+        [[4022  916]
+ [ 877 1982]]
+      AUC:       0.8496
+   ✅ Outer Fold 3 completed
+   ──────────────────────────────────────────────────
+
+📁 OUTER FOLD 4/5
+   Training samples: 31187, Test samples: 7797
+   🔍 Inner CV - Testing 5 parameter sets...
+      Testing parameter set 1/5: {'iterations': 100, 'depth': 6, 'learning_rate': 0.1, 'l2_leaf_reg': 3}
+         Inner Fold 1/3: Accuracy = 0.7610
+         Inner Fold 2/3: Accuracy = 0.7518
+         Inner Fold 3/3: Accuracy = 0.7608
+      ✅ Parameter set 1 - Mean Inner CV Score: 0.7578
+      🎯 NEW BEST: {'iterations': 100, 'depth': 6, 'learning_rate': 0.1, 'l2_leaf_reg': 3} (Score: 0.7578)
+      Testing parameter set 2/5: {'iterations': 200, 'depth': 8, 'learning_rate': 0.05, 'l2_leaf_reg': 5}
+         Inner Fold 1/3: Accuracy = 0.7679
+         Inner Fold 2/3: Accuracy = 0.7580
+         Inner Fold 3/3: Accuracy = 0.7653
+      ✅ Parameter set 2 - Mean Inner CV Score: 0.7637
+      🎯 NEW BEST: {'iterations': 200, 'depth': 8, 'learning_rate': 0.05, 'l2_leaf_reg': 5} (Score: 0.7637)
+      Testing parameter set 3/5: {'iterations': 150, 'depth': 10, 'learning_rate': 0.01, 'l2_leaf_reg': 7}
+         Inner Fold 1/3: Accuracy = 0.7564
+         Inner Fold 2/3: Accuracy = 0.7463
+         Inner Fold 3/3: Accuracy = 0.7490
+      ✅ Parameter set 3 - Mean Inner CV Score: 0.7506
+      Testing parameter set 4/5: {'iterations': 250, 'depth': 6, 'learning_rate': 0.1, 'l2_leaf_reg': 3}
+         Inner Fold 1/3: Accuracy = 0.7687
+         Inner Fold 2/3: Accuracy = 0.7575
+         Inner Fold 3/3: Accuracy = 0.7656
+      ✅ Parameter set 4 - Mean Inner CV Score: 0.7639
+      🎯 NEW BEST: {'iterations': 250, 'depth': 6, 'learning_rate': 0.1, 'l2_leaf_reg': 3} (Score: 0.7639)
+      Testing parameter set 5/5: {'iterations': 300, 'depth': 8, 'learning_rate': 0.05, 'l2_leaf_reg': 5}
+         Inner Fold 1/3: Accuracy = 0.7690
+         Inner Fold 2/3: Accuracy = 0.7578
+         Inner Fold 3/3: Accuracy = 0.7691
+      ✅ Parameter set 5 - Mean Inner CV Score: 0.7653
+      🎯 NEW BEST: {'iterations': 300, 'depth': 8, 'learning_rate': 0.05, 'l2_leaf_reg': 5} (Score: 0.7653)
+
+   🏆 Selected best parameters for Outer Fold 4:
+      {'iterations': 300, 'depth': 8, 'learning_rate': 0.05, 'l2_leaf_reg': 5}
+      Best Inner CV Score: 0.7653
+   🚀 Training final model with best parameters on full training set...
+
+   📊 Outer Fold 4 Test Results:
+      Accuracy:  0.7618
+      Precision: 0.7622
+      Recall:    0.7618
+      F1-Score:  0.7620
+
+      Detailed Classification Report:
+                      precision    recall  f1-score   support
+
+                   0       0.81      0.81      0.81      4940
+                   1       0.67      0.68      0.68      2857
+
+            accuracy                           0.76      7797
+           macro avg       0.74      0.74      0.74      7797
+        weighted avg       0.76      0.76      0.76      7797
+
+      Confusion Matrix:
+        [[4000  940]
+ [ 917 1940]]
+      AUC:       0.8443
+   ✅ Outer Fold 4 completed
+   ──────────────────────────────────────────────────
+
+📁 OUTER FOLD 5/5
+   Training samples: 31188, Test samples: 7796
+   🔍 Inner CV - Testing 5 parameter sets...
+      Testing parameter set 1/5: {'iterations': 100, 'depth': 6, 'learning_rate': 0.1, 'l2_leaf_reg': 3}
+         Inner Fold 1/3: Accuracy = 0.7530
+         Inner Fold 2/3: Accuracy = 0.7603
+         Inner Fold 3/3: Accuracy = 0.7570
+      ✅ Parameter set 1 - Mean Inner CV Score: 0.7568
+      🎯 NEW BEST: {'iterations': 100, 'depth': 6, 'learning_rate': 0.1, 'l2_leaf_reg': 3} (Score: 0.7568)
+      Testing parameter set 2/5: {'iterations': 200, 'depth': 8, 'learning_rate': 0.05, 'l2_leaf_reg': 5}
+         Inner Fold 1/3: Accuracy = 0.7619
+         Inner Fold 2/3: Accuracy = 0.7641
+         Inner Fold 3/3: Accuracy = 0.7636
+      ✅ Parameter set 2 - Mean Inner CV Score: 0.7632
+      🎯 NEW BEST: {'iterations': 200, 'depth': 8, 'learning_rate': 0.05, 'l2_leaf_reg': 5} (Score: 0.7632)
+      Testing parameter set 3/5: {'iterations': 150, 'depth': 10, 'learning_rate': 0.01, 'l2_leaf_reg': 7}
+         Inner Fold 1/3: Accuracy = 0.7448
+         Inner Fold 2/3: Accuracy = 0.7556
+         Inner Fold 3/3: Accuracy = 0.7472
+      ✅ Parameter set 3 - Mean Inner CV Score: 0.7492
+      Testing parameter set 4/5: {'iterations': 250, 'depth': 6, 'learning_rate': 0.1, 'l2_leaf_reg': 3}
+         Inner Fold 1/3: Accuracy = 0.7568
+         Inner Fold 2/3: Accuracy = 0.7620
+         Inner Fold 3/3: Accuracy = 0.7641
+      ✅ Parameter set 4 - Mean Inner CV Score: 0.7610
+      Testing parameter set 5/5: {'iterations': 300, 'depth': 8, 'learning_rate': 0.05, 'l2_leaf_reg': 5}
+         Inner Fold 1/3: Accuracy = 0.7618
+         Inner Fold 2/3: Accuracy = 0.7664
+         Inner Fold 3/3: Accuracy = 0.7664
+      ✅ Parameter set 5 - Mean Inner CV Score: 0.7649
+      🎯 NEW BEST: {'iterations': 300, 'depth': 8, 'learning_rate': 0.05, 'l2_leaf_reg': 5} (Score: 0.7649)
+
+   🏆 Selected best parameters for Outer Fold 5:
+      {'iterations': 300, 'depth': 8, 'learning_rate': 0.05, 'l2_leaf_reg': 5}
+      Best Inner CV Score: 0.7649
+   🚀 Training final model with best parameters on full training set...
+
+   📊 Outer Fold 5 Test Results:
+      Accuracy:  0.7636
+      Precision: 0.7637
+      Recall:    0.7636
+      F1-Score:  0.7636
+
+      Detailed Classification Report:
+                      precision    recall  f1-score   support
+
+                   0       0.81      0.81      0.81      4939
+                   1       0.68      0.68      0.68      2857
+
+            accuracy                           0.76      7796
+           macro avg       0.75      0.75      0.75      7796
+        weighted avg       0.76      0.76      0.76      7796
+
+      Confusion Matrix:
+        [[4015  924]
+ [ 919 1938]]
+      AUC:       0.8459
+   ✅ Outer Fold 5 completed
+   ──────────────────────────────────────────────────
+
+🎯 CATBOOST - FINAL RESULTS:
+   Mean Accuracy:  0.7688
+   Mean Precision: 0.7694
+   Mean Recall:    0.7688
+   Mean F1-Score:  0.7690
+   Mean AUC:      0.8486
+
+   Individual Fold Metrics:
+   Fold   Accuracy   Precision  Recall     F1-Score   AUC
+   ────────────────────────────────────────────────────────────
+   1      0.7712     0.7738     0.7712     0.7723     0.8479
+   2      0.7772     0.7764     0.7772     0.7768     0.8554
+   3      0.7700     0.7707     0.7700     0.7704     0.8496
+   4      0.7618     0.7622     0.7618     0.7620     0.8443
+   5      0.7636     0.7637     0.7636     0.7636     0.8459
 
 ============================================================
 STARTING NESTED CV FOR: RANDOM FOREST
@@ -652,6 +972,7 @@ STARTING NESTED CV FOR: LOGISTIC REGRESSION
    💾 Saved metrics comparison: nested_cross_validation_noAI_results\Model_Performance_Comparison.png
    💾 Saved ROC curve: nested_cross_validation_noAI_results\Random_Forest_ROC_Curves.png
    💾 Saved ROC curve: nested_cross_validation_noAI_results\Logistic_Regression_ROC_Curves.png
+   💾 Saved ROC curve: nested_cross_validation_noAI_results\CatBoost_ROC_Curves.png
    💾 Saved combined ROC curve: nested_cross_validation_noAI_results\ROC_Curve_Comparison.png
 
 🔍 GENERATING FEATURE IMPORTANCE PLOTS...
@@ -673,4 +994,3 @@ AUC             0.8841          0.8073
 
 ✅ Nested Cross-Validation completed successfully!
 📁 All results saved in: nested_cross_validation_noAI_results/
-
