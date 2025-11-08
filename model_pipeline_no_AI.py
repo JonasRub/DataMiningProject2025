@@ -13,10 +13,12 @@ import numpy as np
 import os
 import matplotlib.pyplot as plt
 from sklearn.model_selection import KFold
+from sklearn.base import clone
 from sklearn.metrics import accuracy_score, f1_score, roc_curve, auc, precision_score, recall_score, classification_report, confusion_matrix
 from sklearn.ensemble import RandomForestClassifier, VotingClassifier
 from sklearn.linear_model import LogisticRegression
 from catboost import CatBoostClassifier
+import joblib # For saving models
 
 # Baseline model function
 def baseline_model(input_data):
@@ -99,10 +101,28 @@ def nested_cross_validation_with_metrics(model, params_list, X, y, outer_folds=5
             for inner_fold_num, (inner_train_idx, inner_val_idx) in enumerate(inner_cv.split(X_train), 1):
                 X_inner_train, X_inner_val = X_train.iloc[inner_train_idx], X_train.iloc[inner_val_idx]
                 y_inner_train, y_inner_val = y_train.iloc[inner_train_idx], y_train.iloc[inner_val_idx]
-                
-                # Create new model instance
-                model_instance = model.__class__(**model.get_params())
-                model_instance.set_params(**params)
+
+                ##########################################################
+                # ONLY IMPORTANT FOR VOTİNG CLASSIFIER
+                # Create new model instance (use sklearn.clone to correctly handle complex estimators
+                # like VotingClassifier / pipelines without passing unexpected kwargs to __init__)
+                model_instance = clone(model)
+
+                # If the parameter set is a nested dict for a meta-estimator (e.g. VotingClassifier),
+                # flatten it to the 'estimator__param' format that set_params expects.
+                if isinstance(params, dict) and any(isinstance(v, dict) for v in params.values()):
+                    flat_params = {}
+                    for est_name, est_params in params.items():
+                        if isinstance(est_params, dict):
+                            for k, v in est_params.items():
+                                flat_params[f"{est_name}__{k}"] = v
+                        else:
+                            flat_params[est_name] = est_params
+                    model_instance.set_params(**flat_params)
+                else:
+                    model_instance.set_params(**params)
+                # ONLY IMPORTANT FOR VOTİNG CLASSIFIER
+                ##########################################################
                 
                 # Train on inner training fold
                 model_instance.fit(X_inner_train, y_inner_train)
@@ -134,9 +154,26 @@ def nested_cross_validation_with_metrics(model, params_list, X, y, outer_folds=5
         
         # Train best model on full inner training set
         print(f"   🚀 Training final model with best parameters on full training set...")
-        best_model = model.__class__(**model.get_params())
-        best_model.set_params(**best_params)
+        best_model = clone(model)
+
+        #######################################################
+        # ONLY IMPORTANT FOR VOTİNG CLASSIFIER
+        # Handle nested dict parameter sets for meta-estimators (VotingClassifier etc.)
+        if isinstance(best_params, dict) and any(isinstance(v, dict) for v in best_params.values()):
+            flat_best = {}
+            for est_name, est_params in best_params.items():
+                if isinstance(est_params, dict):
+                    for k, v in est_params.items():
+                        flat_best[f"{est_name}__{k}"] = v
+                else:
+                    flat_best[est_name] = est_params
+            best_model.set_params(**flat_best)
+        else:
+            best_model.set_params(**best_params)
         best_model.fit(X_train, y_train)
+        # ONLY IMPORTANT FOR VOTİNG CLASSIFIER
+        #######################################################
+        
         
         # Store feature importances if available
         if hasattr(best_model, 'feature_importances_'):
@@ -441,8 +478,8 @@ def plot_combined_roc(rf_roc_data, linear_roc_data, catboost_roc_data, save_dir)
 rf_params_list = [
     {'n_estimators': 50, 'max_depth': None, 'min_samples_split': 2},
     {'n_estimators': 100, 'max_depth': 10, 'min_samples_split': 5}
-
 ]
+
 
 linear_params_list = [
     {'C': 0.1, 'penalty': 'l2', 'solver': 'liblinear'},
@@ -562,6 +599,32 @@ voting_clf = VotingClassifier(estimators=[
 voting_clf.fit(X, y)
 print("✅ Final models trained and voting classifier created.")
 # Save the voting classifier
-import joblib
+
 voting_model_path = os.path.join(results_dir, "voting_classifier_model.pkl")
 joblib.dump(voting_clf, voting_model_path)
+
+# Evaluate voting classifier with nested CV, but I need parameters for catboost, rf, and linear
+catboost_params = catboost_best_params
+rf_params = rf_best_params
+linear_params = linear_best_params
+
+voting_params_list = [
+    {
+        'catboost': catboost_params,
+        'random_forest': rf_params,
+        'logistic_regression': linear_params
+    }
+]
+
+voting_mean_score, voting_fold_scores, voting_best_params, voting_metrics, voting_feature_importances = nested_cross_validation_with_metrics(
+    voting_clf, voting_params_list, X, y, outer_folds=2, inner_folds=2, model_name="VOTING CLASSIFIER"
+)
+plot_roc_curves(voting_metrics['roc_data'], "Voting Classifier", results_dir)
+
+#Use joblist to save the other models as well
+catboost_model_path = os.path.join(results_dir, "catboost_model.pkl")
+joblib.dump(catboost_model, catboost_model_path)
+rf_model_path = os.path.join(results_dir, "random_forest_model.pkl")
+joblib.dump(rf_model, rf_model_path)
+linear_model_path = os.path.join(results_dir, "logistic_regression_model.pkl")
+joblib.dump(linear_model, linear_model_path)
