@@ -1,12 +1,9 @@
-
 #TODO: Compare parameter importance with domain knowledge
 #TODO: Add preprocessing steps from the previous pipeline
 #TODO: Add better parameter searching, maybe grid search
-#Implement voting system: Done, check for bugs
-# What does 'C': 0.1, 'penalty': 'l1' mean, remove if bad: Ok not good or bad, just different regularization, can fix using grid search
+#Implement voting system: Done
+#TODO: What does 'C': 0.1, 'penalty': 'l1' mean, remove if bad
 #TODO: Add another simple baseline model
-#Add feature importance for logistic regression and catboost: Done, hopefully there is no mixup of coefficients?
-#TODO: Increase folds when all other tasks are done (2,2) at the moment for testing speed
 
 
 import pandas as pd
@@ -138,13 +135,6 @@ def nested_cross_validation_with_metrics(model, params_list, X, y, outer_folds=5
             feature_importances = best_model.feature_importances_
             metrics_data['feature_importances'].append(feature_importances)
             all_feature_importances.append(feature_importances)
-        elif hasattr(best_model, 'coef_'):
-            # coef_ can be 2D (n_classes, n_features). Flatten to 1D so downstream code
-            # (mean across folds and DataFrame creation) receives a 1-D array per fold.
-            feature_importances = best_model.coef_.ravel()
-            metrics_data['feature_importances'].append(feature_importances)
-            all_feature_importances.append(feature_importances)
-
         
         # Predict on outer test set
         y_pred = best_model.predict(X_test)
@@ -273,19 +263,7 @@ def plot_feature_importance(feature_importances, feature_names, model_name, save
     
     # Calculate mean feature importance across folds
     mean_importance = np.mean(feature_importances, axis=0)
-
-    # Ensure we have a 1-D array for pandas (coef_ can be shape (1, n_features) or similar)
-    mean_importance = np.squeeze(mean_importance)
-    if getattr(mean_importance, 'ndim', 1) != 1:
-        mean_importance = np.asarray(mean_importance).flatten()
-
-    # If lengths mismatch, try to adjust by taking the first matching slice
-    if len(mean_importance) != len(feature_names):
-        try:
-            mean_importance = mean_importance.reshape(-1)[:len(feature_names)]
-        except Exception:
-            raise ValueError(f"Feature names length ({len(feature_names)}) does not match importance length ({len(mean_importance)})")
-
+    
     # Create DataFrame for better visualization
     importance_df = pd.DataFrame({
         'feature': feature_names,
@@ -464,28 +442,11 @@ catboost_model = CatBoostClassifier(random_state=42, verbose=0)
 print("🚀 STARTING NESTED CROSS-VALIDATION FOR BOTH MODELS")
 print("="*70)
 
-
 # Train Catboost
 catboost_model = CatBoostClassifier(random_state=42, verbose=0)
 catboost_mean_score, catboost_fold_scores, catboost_best_params, catboost_metrics, catboost_feature_importances = nested_cross_validation_with_metrics(
-    catboost_model, catboost_params_list, X, y, outer_folds=2, inner_folds=2, model_name="CATBOOST"
+    catboost_model, catboost_params_list, X, y, outer_folds=5, inner_folds=3, model_name="CATBOOST"
 )
-plot_feature_importance(catboost_feature_importances, X.columns, "CatBoost", results_dir)
-
-
-
-# Train Logistic Regression
-linear_mean_score, linear_fold_scores, linear_best_params, linear_metrics, linear_feature_importances = nested_cross_validation_with_metrics(
-    linear_model, linear_params_list, X, y, outer_folds=2, inner_folds=2, model_name="LOGISTIC REGRESSION"
-)
-
-print(f"   📝 Note: Logistic Regression feature importance based on coefficients")
-coef_importances = np.mean(np.abs(linear_feature_importances), axis=0)
-plot_feature_importance([coef_importances], X.columns, "Logistic Regression", results_dir)
-
-
-
-
 
 
 # Train Random Forest
@@ -495,7 +456,10 @@ rf_mean_score, rf_fold_scores, rf_best_params, rf_metrics, rf_feature_importance
 
 print("\n" + "="*70)
 
-
+# Train Logistic Regression
+linear_mean_score, linear_fold_scores, linear_best_params, linear_metrics, linear_feature_importances = nested_cross_validation_with_metrics(
+    linear_model, linear_params_list, X, y, outer_folds=5, inner_folds=3, model_name="LOGISTIC REGRESSION"
+)
 
 
 
@@ -517,6 +481,11 @@ if rf_metrics['roc_data']['fpr']:
 print(f"\n🔍 GENERATING FEATURE IMPORTANCE PLOTS...")
 plot_feature_importance(rf_feature_importances, X.columns, "Random Forest", results_dir)
 
+# Logistic Regression doesn't have direct feature importance, but we can use coefficients
+if hasattr(linear_model, 'coef_'):
+    # For linear models, we can get coefficients as feature importance
+    # Note: This requires retraining on full data or storing coefficients during CV
+    print(f"   📝 Note: Logistic Regression feature importance based on coefficients")
 
 # Final summary
 print("\n" + "="*70)
