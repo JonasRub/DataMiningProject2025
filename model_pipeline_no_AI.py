@@ -7,6 +7,8 @@
 #Add feature importance for logistic regression and catboost: Done, hopefully there is no mixup of coefficients?
 #TODO: Increase folds when all other tasks are done (2,2) at the moment for testing speed
 
+import warnings
+warnings.filterwarnings("ignore")
 
 import pandas as pd
 import numpy as np
@@ -19,6 +21,10 @@ from sklearn.ensemble import RandomForestClassifier, VotingClassifier
 from sklearn.linear_model import LogisticRegression
 from catboost import CatBoostClassifier
 import joblib # For saving models
+
+from sklearn.preprocessing import StandardScaler
+
+from helper_KMv2 import get_preprocessor, dataCleaning #MMO
 
 # Baseline model function
 def baseline_model(input_data):
@@ -36,7 +42,7 @@ baseline_prediction = baseline_model(data)
 print("Baseline model prediction (majority class):", baseline_prediction[0])
 print("Baseline model accuracy:", baseline_prediction[1])
 # Baseline model function ends here
-
+baseline_accuracy = baseline_prediction[1]
 X = data.drop(columns=['smoking'])
 y = data['smoking']
 
@@ -45,7 +51,7 @@ y = data['smoking']
 # Create results directory
 results_dir = "nested_cross_validation_noAI_results"
 os.makedirs(results_dir, exist_ok=True)
-print(f"📁 Created results directory: {results_dir}")
+print(f" Created results directory: {results_dir}")
 
 def nested_cross_validation_with_metrics(model, params_list, X, y, outer_folds=5, inner_folds=3, model_name="Model"):
     """
@@ -79,7 +85,7 @@ def nested_cross_validation_with_metrics(model, params_list, X, y, outer_folds=5
     print(f"{'='*60}")
     
     for fold_num, (train_idx, test_idx) in enumerate(outer_cv.split(X), 1):
-        print(f"\n📁 OUTER FOLD {fold_num}/{outer_folds}")
+        print(f"\n OUTER FOLD {fold_num}/{outer_folds}")
         print(f"   Training samples: {len(train_idx)}, Test samples: {len(test_idx)}")
         
         X_train, X_test = X.iloc[train_idx], X.iloc[test_idx]
@@ -89,7 +95,10 @@ def nested_cross_validation_with_metrics(model, params_list, X, y, outer_folds=5
         best_params = None
         param_scores = []
         
-        print(f"   🔍 Inner CV - Testing {len(params_list)} parameter sets...")
+        cleaner = dataCleaning() #MMO
+        preprocessor = get_preprocessor() #MMO
+
+        print(f"    Inner CV - Testing {len(params_list)} parameter sets...")
         
         # Test each parameter set in inner CV
         for param_idx, params in enumerate(params_list, 1):
@@ -124,23 +133,31 @@ def nested_cross_validation_with_metrics(model, params_list, X, y, outer_folds=5
                 # ONLY IMPORTANT FOR VOTİNG CLASSIFIER
                 ##########################################################
                 
+                X_inner_train_clean = cleaner.fit_transform(X_inner_train)
+                y_inner_train = y_inner_train.loc[X_inner_train_clean.index]
+                X_inner_val_clean = cleaner.transform(X_inner_val)
+                y_inner_val = y_inner_val.loc[X_inner_val_clean.index]
+
+                X_inner_train_prep = preprocessor.fit_transform(X_inner_train_clean)
+                X_inner_val_prep = preprocessor.transform(X_inner_val_clean)
+                
                 # Train on inner training fold
-                model_instance.fit(X_inner_train, y_inner_train)
+                model_instance.fit(X_inner_train_prep, y_inner_train)
                 
                 # Score on validation
-                score = accuracy_score(y_inner_val, model_instance.predict(X_inner_val))
+                score = accuracy_score(y_inner_val, model_instance.predict(X_inner_val_prep))
                 inner_scores.append(score)
                 
                 print(f"         Inner Fold {inner_fold_num}/{inner_folds}: Accuracy = {score:.4f}")
             
             mean_inner_score = np.mean(inner_scores)
             param_scores.append((params, mean_inner_score))
-            print(f"      ✅ Parameter set {param_idx} - Mean Inner CV Score: {mean_inner_score:.4f}")
+            print(f"       Parameter set {param_idx} - Mean Inner CV Score: {mean_inner_score:.4f}")
             
             if mean_inner_score > best_score:
                 best_score = mean_inner_score
                 best_params = params
-                print(f"      🎯 NEW BEST: {best_params} (Score: {best_score:.4f})")
+                print(f"       NEW BEST: {best_params} (Score: {best_score:.4f})")
         
         # Store best parameters for this outer fold and update overall best if needed
         all_best_params.append(best_params)
@@ -148,12 +165,12 @@ def nested_cross_validation_with_metrics(model, params_list, X, y, outer_folds=5
             best_overall_score = best_score
             best_overall_params = best_params.copy()  # Make a copy to be safe
         
-        print(f"\n   🏆 Selected best parameters for Outer Fold {fold_num}:")
+        print(f"\n    Selected best parameters for Outer Fold {fold_num}:")
         print(f"      {best_params}")
         print(f"      Best Inner CV Score: {best_score:.4f}")
         
         # Train best model on full inner training set
-        print(f"   🚀 Training final model with best parameters on full training set...")
+        print(f"    Training final model with best parameters on full training set...")
         best_model = clone(model)
 
         #######################################################
@@ -170,7 +187,24 @@ def nested_cross_validation_with_metrics(model, params_list, X, y, outer_folds=5
             best_model.set_params(**flat_best)
         else:
             best_model.set_params(**best_params)
-        best_model.fit(X_train, y_train)
+        
+        #MMO
+        X_train_clean = cleaner.fit_transform(X_train)
+        X_test_clean = cleaner.transform(X_test)
+
+        y_train = y_train.loc[X_train_clean.index]
+        y_test = y_test.loc[X_test_clean.index]
+
+        X_train_prep =  preprocessor.fit_transform(X_train_clean)
+        X_test_prep = preprocessor.transform(X_test_clean)
+        #MMO
+        
+        if model_name == 'LOGISTIC REGRESSION':
+            scaler = StandardScaler()
+            X_train_prep= scaler.fit_transform(X_train_prep)
+            X_test_prep= scaler.transform(X_test_prep)
+
+        best_model.fit(X_train_prep, y_train)
         # ONLY IMPORTANT FOR VOTİNG CLASSIFIER
         #######################################################
         
@@ -189,8 +223,8 @@ def nested_cross_validation_with_metrics(model, params_list, X, y, outer_folds=5
 
         
         # Predict on outer test set
-        y_pred = best_model.predict(X_test)
-        y_pred_proba = best_model.predict_proba(X_test)
+        y_pred = best_model.predict(X_test_prep)
+        y_pred_proba = best_model.predict_proba(X_test_prep)
         
         # Calculate comprehensive metrics
         accuracy = accuracy_score(y_test, y_pred)
@@ -207,7 +241,7 @@ def nested_cross_validation_with_metrics(model, params_list, X, y, outer_folds=5
         metrics_data['f1'].append(f1)
         metrics_data['confusion_matrices'].append(cm)
         
-        print(f"\n   📊 Outer Fold {fold_num} Test Results:")
+        print(f"\n    Outer Fold {fold_num} Test Results:")
         print(f"      Accuracy:  {accuracy:.4f}")
         print(f"      Precision: {precision:.4f}")
         print(f"      Recall:    {recall:.4f}")
@@ -235,11 +269,11 @@ def nested_cross_validation_with_metrics(model, params_list, X, y, outer_folds=5
             
             print(f"      AUC:       {roc_auc:.4f}")
         
-        print(f"   ✅ Outer Fold {fold_num} completed")
+        print(f"    Outer Fold {fold_num} completed")
         print(f"   {'─'*50}")
 
     mean_score = np.mean(outer_scores)
-    print(f"\n🎯 {model_name} - FINAL RESULTS:")
+    print(f"\n {model_name} - FINAL RESULTS:")
     print(f"   Mean Accuracy:  {mean_score:.4f}")
     print(f"   Mean Precision: {np.mean(metrics_data['precision']):.4f}")
     print(f"   Mean Recall:    {np.mean(metrics_data['recall']):.4f}")
@@ -305,13 +339,13 @@ def plot_roc_curves(roc_data, model_name, save_dir):
     plt.savefig(filepath, dpi=300, bbox_inches='tight')
     plt.close()
     
-    print(f"   💾 Saved ROC curve: {filepath}")
+    print(f"    Saved ROC curve: {filepath}")
     return mean_auc
 
 def plot_feature_importance(feature_importances, feature_names, model_name, save_dir):
     """Plot feature importance and save to file"""
     if len(feature_importances) == 0:
-        print(f"   ⚠️  No feature importances available for {model_name}")
+        print(f"     No feature importances available for {model_name}")
         return
     
     # Calculate mean feature importance across folds
@@ -349,17 +383,17 @@ def plot_feature_importance(feature_importances, feature_names, model_name, save
     plt.savefig(filepath, dpi=300, bbox_inches='tight')
     plt.close()
     
-    print(f"   💾 Saved feature importance: {filepath}")
+    print(f"    Saved feature importance: {filepath}")
     
     # Also save feature importance data to CSV
     csv_filename = f"{model_name.replace(' ', '_')}_Feature_Importance.csv"
     csv_filepath = os.path.join(save_dir, csv_filename)
     importance_df.to_csv(csv_filepath, index=False)
-    print(f"   💾 Saved feature importance data: {csv_filepath}")
+    print(f"    Saved feature importance data: {csv_filepath}")
     
     return importance_df
 
-def plot_metrics_comparison(rf_metrics, linear_metrics, catboost_metrics, save_dir):
+def plot_metrics_comparison(rf_metrics, linear_metrics, catboost_metrics, baseline_accuracy, save_dir):
     """Plot comparison of metrics between models and save to file"""
     metrics_names = ['Accuracy', 'Precision', 'Recall', 'F1-Score']
     rf_means = [
@@ -380,14 +414,16 @@ def plot_metrics_comparison(rf_metrics, linear_metrics, catboost_metrics, save_d
         np.mean(catboost_metrics['recall']),
         np.mean(catboost_metrics['f1'])
     ]
+    baseline_means = [baseline_accuracy, 0, 0, 0]
 
     x = np.arange(len(metrics_names))
-    width = 0.35
+    width = 0.25
     
-    fig, ax = plt.subplots(figsize=(12, 6))
-    rects1 = ax.bar(x - width/2, rf_means, width, label='Random Forest', alpha=0.8, color='skyblue')
-    rects2 = ax.bar(x + width/2, linear_means, width, label='Logistic Regression', alpha=0.8, color='lightcoral')
-    rects3 = ax.bar(x + 1.5*width, catboost_means, width, label='CatBoost', alpha=0.8, color='lightgreen')
+    fig, ax = plt.subplots(figsize=(16, 6))
+    rects1 = ax.bar(x - 1.5*width, rf_means, width, label='Random Forest', alpha=0.8, color='skyblue')
+    rects2 = ax.bar(x - 0.5*width, linear_means, width, label='Logistic Regression', alpha=0.8, color='lightcoral')
+    rects3 = ax.bar(x + 0.5*width, catboost_means, width, label='CatBoost', alpha=0.8, color='lightgreen')
+    rects4 = ax.bar(x + 1.5*width, baseline_means, width, label='Baseline', alpha=0.8, color='grey')
     
     ax.set_xlabel('Metrics')
     ax.set_ylabel('Scores')
@@ -398,8 +434,10 @@ def plot_metrics_comparison(rf_metrics, linear_metrics, catboost_metrics, save_d
     ax.set_ylim(0, 1)
     
     # Add value labels on bars
-    for rect in rects1 + rects2 + rects3:
+    for rect in rects1 + rects2 + rects3 + rects4:
         height = rect.get_height()
+        if height == 0:
+            continue
         ax.annotate(f'{height:.3f}',
                     xy=(rect.get_x() + rect.get_width() / 2, height),
                     xytext=(0, 3),
@@ -415,7 +453,7 @@ def plot_metrics_comparison(rf_metrics, linear_metrics, catboost_metrics, save_d
     plt.savefig(filepath, dpi=300, bbox_inches='tight')
     plt.close()
     
-    print(f"   💾 Saved metrics comparison: {filepath}")
+    print(f"    Saved metrics comparison: {filepath}")
 
 def plot_combined_roc(rf_roc_data, linear_roc_data, catboost_roc_data, save_dir):
     """Plot both models' ROC curves on the same plot and save"""
@@ -470,7 +508,7 @@ def plot_combined_roc(rf_roc_data, linear_roc_data, catboost_roc_data, save_dir)
     plt.savefig(filepath, dpi=300, bbox_inches='tight')
     plt.close()
     
-    print(f"   💾 Saved combined ROC curve: {filepath}")
+    print(f"    Saved combined ROC curve: {filepath}")
 
     return mean_auc_rf, mean_auc_lr, mean_auc_cb
 
@@ -496,7 +534,7 @@ rf_model = RandomForestClassifier(random_state=42)
 linear_model = LogisticRegression(random_state=42, max_iter=1000)
 catboost_model = CatBoostClassifier(random_state=42, verbose=0)
 
-print("🚀 STARTING NESTED CROSS-VALIDATION FOR BOTH MODELS")
+print(" STARTING NESTED CROSS-VALIDATION FOR BOTH MODELS")
 print("="*70)
 
 
@@ -514,7 +552,7 @@ linear_mean_score, linear_fold_scores, linear_best_params, linear_metrics, linea
     linear_model, linear_params_list, X, y, outer_folds=2, inner_folds=2, model_name="LOGISTIC REGRESSION"
 )
 
-print(f"   📝 Note: Logistic Regression feature importance based on coefficients")
+print(f"    Note: Logistic Regression feature importance based on coefficients")
 coef_importances = np.mean(np.abs(linear_feature_importances), axis=0)
 plot_feature_importance([coef_importances], X.columns, "Logistic Regression", results_dir)
 
@@ -535,11 +573,11 @@ print("\n" + "="*70)
 
 
 # Generate and save all plots
-print(f"\n📊 GENERATING AND SAVING PLOTS...")
-print(f"   📁 Saving to: {results_dir}")
+print(f"\n GENERATING AND SAVING PLOTS...")
+print(f"    Saving to: {results_dir}")
 
 # Plot metrics comparison
-plot_metrics_comparison(rf_metrics, linear_metrics, catboost_metrics, results_dir)
+plot_metrics_comparison(rf_metrics, linear_metrics, catboost_metrics, baseline_accuracy, results_dir)
 
 # Plot ROC curves if binary classification
 if rf_metrics['roc_data']['fpr']:
@@ -549,16 +587,16 @@ if rf_metrics['roc_data']['fpr']:
     plot_combined_roc(rf_metrics['roc_data'], linear_metrics['roc_data'], catboost_metrics['roc_data'], results_dir)
 
 # Plot feature importance
-print(f"\n🔍 GENERATING FEATURE IMPORTANCE PLOTS...")
+print(f"\n GENERATING FEATURE IMPORTANCE PLOTS...")
 plot_feature_importance(rf_feature_importances, X.columns, "Random Forest", results_dir)
 
 
 # Final summary
 print("\n" + "="*70)
-print("🎯 FINAL COMPARISON SUMMARY")
+print(" FINAL COMPARISON SUMMARY")
 print("="*70)
 
-print(f"\n🏆 FINAL MODEL COMPARISON:")
+print(f"\n FINAL MODEL COMPARISON:")
 print(f"{'Metric':<15} {'Random Forest':<15} {'Logistic Regression':<15}")
 print(f"{'-'*50}")
 print(f"{'Accuracy':<15} {np.mean(rf_metrics['accuracy']):<15.4f} {np.mean(linear_metrics['accuracy']):<15.4f}")
@@ -569,12 +607,12 @@ print(f"{'F1-Score':<15} {np.mean(rf_metrics['f1']):<15.4f} {np.mean(linear_metr
 if rf_metrics['roc_data']['fpr']:
     print(f"{'AUC':<15} {rf_mean_auc:<15.4f} {linear_mean_auc:<15.4f}")
 
-print(f"\n✅ Nested Cross-Validation completed successfully!")
-print(f"📁 All results saved in: {results_dir}/")
+print(f"\n Nested Cross-Validation completed successfully!")
+print(f" All results saved in: {results_dir}/")
 
 #Using the best parameters, add a final training on the whole dataset
 # and add a voter system that uses all three models to make a final prediction.
-print("\n🚀 FINAL TRAINING ON FULL DATASET WITH BEST PARAMETERS")
+print("\n FINAL TRAINING ON FULL DATASET WITH BEST PARAMETERS")
 
 # Train CatBoost with best params
 catboost_model = CatBoostClassifier(**catboost_best_params, random_state=42, verbose=0)
@@ -597,7 +635,7 @@ voting_clf = VotingClassifier(estimators=[
 
 # Train the voting classifier
 voting_clf.fit(X, y)
-print("✅ Final models trained and voting classifier created.")
+print(" Final models trained and voting classifier created.")
 # Save the voting classifier
 
 voting_model_path = os.path.join(results_dir, "voting_classifier_model.pkl")
