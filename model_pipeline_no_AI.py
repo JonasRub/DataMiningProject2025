@@ -1,8 +1,7 @@
 
 #TODO: Compare parameter importance with domain knowledge
-#TODO: Add preprocessing steps from the previous pipeline
 #TODO: Add better parameter searching, maybe grid search
-#Implement voting system: Done, check for bugs
+#Implement voting system: Done
 # What does 'C': 0.1, 'penalty': 'l1' mean, remove if bad: Ok not good or bad, just different regularization, can fix using grid search
 #TODO: Add another simple baseline model
 #Add feature importance for logistic regression and catboost: Done, hopefully there is no mixup of coefficients?
@@ -52,7 +51,9 @@ def nested_cross_validation_with_metrics(model, params_list, X, y, outer_folds=5
     """
     outer_cv = KFold(n_splits=outer_folds, shuffle=True, random_state=42)
     outer_scores = []
-    all_best_params = []
+    all_best_params = []  # Store best params for each fold
+    best_overall_params = None  # Store the single best parameter set
+    best_overall_score = -1  # Track the best score across all folds
     all_feature_importances = []
     
     # Store comprehensive metrics
@@ -121,8 +122,12 @@ def nested_cross_validation_with_metrics(model, params_list, X, y, outer_folds=5
                 best_params = params
                 print(f"      🎯 NEW BEST: {best_params} (Score: {best_score:.4f})")
         
-        # Store best parameters for this outer fold
+        # Store best parameters for this outer fold and update overall best if needed
         all_best_params.append(best_params)
+        if best_score > best_overall_score:
+            best_overall_score = best_score
+            best_overall_params = best_params.copy()  # Make a copy to be safe
+        
         print(f"\n   🏆 Selected best parameters for Outer Fold {fold_num}:")
         print(f"      {best_params}")
         print(f"      Best Inner CV Score: {best_score:.4f}")
@@ -202,6 +207,7 @@ def nested_cross_validation_with_metrics(model, params_list, X, y, outer_folds=5
     print(f"   Mean Precision: {np.mean(metrics_data['precision']):.4f}")
     print(f"   Mean Recall:    {np.mean(metrics_data['recall']):.4f}")
     print(f"   Mean F1-Score:  {np.mean(metrics_data['f1']):.4f}")
+    print(f"   Best Parameters: {best_overall_params}")
     
     if metrics_data['roc_data']['fpr']:
         mean_auc = np.mean(metrics_data['roc_data']['roc_auc'])
@@ -218,7 +224,7 @@ def nested_cross_validation_with_metrics(model, params_list, X, y, outer_folds=5
             row += f" {metrics_data['roc_data']['roc_auc'][i]:<10.4f}"
         print(row)
     
-    return mean_score, outer_scores, all_best_params, metrics_data, all_feature_importances
+    return mean_score, outer_scores, best_overall_params, metrics_data, all_feature_importances
 
 def plot_roc_curves(roc_data, model_name, save_dir):
     """Plot ROC curves for all folds and save to file"""
@@ -434,25 +440,17 @@ def plot_combined_roc(rf_roc_data, linear_roc_data, catboost_roc_data, save_dir)
 # Define parameter sets
 rf_params_list = [
     {'n_estimators': 50, 'max_depth': None, 'min_samples_split': 2},
-    {'n_estimators': 100, 'max_depth': 10, 'min_samples_split': 5},
-    {'n_estimators': 200, 'max_depth': 20, 'min_samples_split': 10},
-    {'n_estimators': 100, 'max_depth': None, 'min_samples_split': 2},
-    {'n_estimators': 150, 'max_depth': 15, 'min_samples_split': 3}
+    {'n_estimators': 100, 'max_depth': 10, 'min_samples_split': 5}
+
 ]
 
 linear_params_list = [
     {'C': 0.1, 'penalty': 'l2', 'solver': 'liblinear'},
-    {'C': 1.0, 'penalty': 'l2', 'solver': 'liblinear'},
-    {'C': 10.0, 'penalty': 'l2', 'solver': 'liblinear'},
-    {'C': 0.1, 'penalty': 'l1', 'solver': 'liblinear'},
-    {'C': 1.0, 'penalty': 'l1', 'solver': 'liblinear'}
+    {'C': 1.0, 'penalty': 'l2', 'solver': 'liblinear'}
 ]
 
 catboost_params_list = [
     {'iterations': 100, 'depth': 6, 'learning_rate': 0.1, 'l2_leaf_reg': 3},
-    {'iterations': 200, 'depth': 8, 'learning_rate': 0.05, 'l2_leaf_reg': 5},
-    {'iterations': 150, 'depth': 10, 'learning_rate': 0.01, 'l2_leaf_reg': 7},
-    {'iterations': 250, 'depth': 6, 'learning_rate': 0.1, 'l2_leaf_reg': 3},
     {'iterations': 300, 'depth': 8, 'learning_rate': 0.05, 'l2_leaf_reg': 5}
 ]
 
@@ -490,7 +488,7 @@ plot_feature_importance([coef_importances], X.columns, "Logistic Regression", re
 
 # Train Random Forest
 rf_mean_score, rf_fold_scores, rf_best_params, rf_metrics, rf_feature_importances = nested_cross_validation_with_metrics(
-    rf_model, rf_params_list, X, y, outer_folds=5, inner_folds=3, model_name="RANDOM FOREST"
+    rf_model, rf_params_list, X, y, outer_folds=2, inner_folds=2, model_name="RANDOM FOREST"
 )
 
 print("\n" + "="*70)
