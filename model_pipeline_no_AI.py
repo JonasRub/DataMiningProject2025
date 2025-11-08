@@ -3,7 +3,6 @@
 #TODO: Add better parameter searching, maybe grid search
 #Implement voting system: Done
 # What does 'C': 0.1, 'penalty': 'l1' mean, remove if bad: Ok not good or bad, just different regularization, can fix using grid search
-#TODO: Add another simple baseline model
 #Add feature importance for logistic regression and catboost: Done, hopefully there is no mixup of coefficients?
 #TODO: Increase folds when all other tasks are done (2,2) at the moment for testing speed
 
@@ -14,16 +13,14 @@ import pandas as pd
 import numpy as np
 import os
 import matplotlib.pyplot as plt
-from sklearn.model_selection import KFold
+from sklearn.model_selection import KFold, ParameterGrid
 from sklearn.base import clone
 from sklearn.metrics import accuracy_score, f1_score, roc_curve, auc, precision_score, recall_score, classification_report, confusion_matrix
 from sklearn.ensemble import RandomForestClassifier, VotingClassifier
 from sklearn.linear_model import LogisticRegression
 from catboost import CatBoostClassifier
 import joblib # For saving models
-
 from sklearn.preprocessing import StandardScaler
-
 from helper_KMv2 import get_preprocessor, dataCleaning #MMO
 
 # Baseline model function
@@ -513,21 +510,29 @@ def plot_combined_roc(rf_roc_data, linear_roc_data, catboost_roc_data, save_dir)
     return mean_auc_rf, mean_auc_lr, mean_auc_cb
 
 # Define parameter sets
-rf_params_list = [
-    {'n_estimators': 50, 'max_depth': None, 'min_samples_split': 2},
-    {'n_estimators': 100, 'max_depth': 10, 'min_samples_split': 5}
-]
+rf_param_grid = {
+    'n_estimators': [50, 100, 150],
+    'max_depth': [10, 15, None],
+    'min_samples_split': [2, 5, 10]
+}
+
+linear_param_grid = {
+    'C': [ 0.1, 1.0, 10.0],
+    'penalty': ['l2'],
+    'solver': ['liblinear', 'newton-cholesky']
+}
 
 
-linear_params_list = [
-    {'C': 0.1, 'penalty': 'l2', 'solver': 'liblinear'},
-    {'C': 1.0, 'penalty': 'l2', 'solver': 'liblinear'}
-]
+catboost_param_grid = {
+    'iterations': [100, 200],
+    'depth': [ 5, 6, 8, 10],
+    'learning_rate': [ 0.05, 0.01, 0.1],
+    'l2_leaf_reg': [ 3, 5]
+}
 
-catboost_params_list = [
-    {'iterations': 100, 'depth': 6, 'learning_rate': 0.1, 'l2_leaf_reg': 3},
-    {'iterations': 300, 'depth': 8, 'learning_rate': 0.05, 'l2_leaf_reg': 5}
-]
+rf_params_list = list(ParameterGrid(rf_param_grid))
+linear_params_list = list(ParameterGrid(linear_param_grid))
+catboost_params_list = list(ParameterGrid(catboost_param_grid))
 
 # Initialize models
 rf_model = RandomForestClassifier(random_state=42)
