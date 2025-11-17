@@ -1,0 +1,23 @@
+feature,importance
+eyesight(right),0.0072835246
+AST,0.010975464
+height(cm),0.01808405
+age,0.01863657
+dental caries,0.018951304
+systolic,0.01908403
+hearing(right),0.019623525
+waist(cm),0.020747233
+HDL,0.020789057
+relaxation,0.020796703
+eyesight(left),0.02084115
+Gtp,0.020952936
+hearing(left),0.022151317
+Cholesterol,0.023010088
+triglyceride,0.023105279
+fasting blood sugar,0.025711436
+LDL,0.025944468
+serum creatinine,0.026609348
+ALT,0.031818032
+hemoglobin,0.06954908
+Urine protein,0.08990544
+weight(kg),0.3877762

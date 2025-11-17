@@ -7,6 +7,7 @@
 #Add feature importance for logistic regression and catboost: Done, hopefully there is no mixup of coefficients?
 #TODO: Increase folds when all other tasks are done (2,2) at the moment for testing speed
 #TODO:XGBosst and Decision Tree add
+#TODO: Add better feature selection
 
 import warnings
 warnings.filterwarnings("ignore")
@@ -22,6 +23,7 @@ from sklearn.ensemble import RandomForestClassifier, VotingClassifier
 from sklearn.linear_model import LogisticRegression
 from xgboost import XGBClassifier as xgboostClassifier
 import joblib # For saving models
+from sklearn.tree import DecisionTreeClassifier
 
 from sklearn.preprocessing import StandardScaler
 
@@ -421,7 +423,7 @@ def plot_metrics_comparison(rf_metrics, linear_metrics, xgboost_metrics, baselin
     width = 0.25
     
     fig, ax = plt.subplots(figsize=(16, 6))
-    rects1 = ax.bar(x - 1.5*width, rf_means, width, label='Random Forest', alpha=0.8, color='skyblue')
+    rects1 = ax.bar(x - 1.5*width, rf_means, width, label='Decision Tree', alpha=0.8, color='skyblue')
     rects2 = ax.bar(x - 0.5*width, linear_means, width, label='Logistic Regression', alpha=0.8, color='lightcoral')
     rects3 = ax.bar(x + 0.5*width, xgboost_means, width, label='xgboost', alpha=0.8, color='lightgreen')
     rects4 = ax.bar(x + 1.5*width, baseline_means, width, label='Baseline', alpha=0.8, color='grey')
@@ -460,7 +462,7 @@ def plot_combined_roc(rf_roc_data, linear_roc_data, xgboost_roc_data, save_dir):
     """Plot both models' ROC curves on the same plot and save"""
     plt.figure(figsize=(12, 8))
     
-    # Calculate mean ROC for Random Forest
+    # Calculate mean ROC for Decision Tree
     mean_fpr_rf = np.linspace(0, 1, 100)
     mean_tpr_rf = np.zeros_like(mean_fpr_rf)
     for fpr, tpr in zip(rf_roc_data['fpr'], rf_roc_data['tpr']):
@@ -486,7 +488,7 @@ def plot_combined_roc(rf_roc_data, linear_roc_data, xgboost_roc_data, save_dir):
 
     # Plot mean ROC curves
     plt.plot(mean_fpr_rf, mean_tpr_rf, color='blue', lw=3,
-             label=f'Random Forest (AUC = {mean_auc_rf:.3f})')
+             label=f'Decision Tree (AUC = {mean_auc_rf:.3f})')
     plt.plot(mean_fpr_lr, mean_tpr_lr, color='red', lw=3,
              label=f'Logistic Regression (AUC = {mean_auc_lr:.3f})')
     plt.plot(mean_fpr_cb, mean_tpr_cb, color='green', lw=3,
@@ -499,7 +501,7 @@ def plot_combined_roc(rf_roc_data, linear_roc_data, xgboost_roc_data, save_dir):
     plt.ylim([0.0, 1.05])
     plt.xlabel('False Positive Rate')
     plt.ylabel('True Positive Rate')
-    plt.title('ROC Curve Comparison - Random Forest vs Logistic Regression')
+    plt.title('ROC Curve Comparison - Decision Tree vs Logistic Regression')
     plt.legend(loc="lower right")
     plt.grid(alpha=0.3)
     
@@ -515,8 +517,8 @@ def plot_combined_roc(rf_roc_data, linear_roc_data, xgboost_roc_data, save_dir):
 
 # Define parameter sets
 rf_params_list = [
-    {'n_estimators': 50, 'max_depth': None, 'min_samples_split': 2},
-    {'n_estimators': 100, 'max_depth': 10, 'min_samples_split': 5,}
+    { 'max_depth': None, 'min_samples_split': 2},
+    { 'max_depth': 10, 'min_samples_split': 5,}
 ]
 
 
@@ -532,7 +534,7 @@ xgboost_params_list = [
 #add more params for xgboost, other variables etc
 
 # Initialize models
-rf_model = RandomForestClassifier(random_state=42)
+rf_model = DecisionTreeClassifier(random_state=42)
 linear_model = LogisticRegression(random_state=42, max_iter=1000)
 xgboost_model = xgboostClassifier()
 
@@ -563,9 +565,9 @@ plot_feature_importance([coef_importances], X.columns, "Logistic Regression", re
 
 
 
-# Train Random Forest
+# Train Decision Tree
 rf_mean_score, rf_fold_scores, rf_best_params, rf_metrics, rf_feature_importances = nested_cross_validation_with_metrics(
-    rf_model, rf_params_list, X, y, outer_folds=2, inner_folds=2, model_name="RANDOM FOREST"
+    rf_model, rf_params_list, X, y, outer_folds=2, inner_folds=2, model_name="Decision Tree"
 )
 
 print("\n" + "="*70)
@@ -583,14 +585,14 @@ plot_metrics_comparison(rf_metrics, linear_metrics, xgboost_metrics, baseline_ac
 
 # Plot ROC curves if binary classification
 if rf_metrics['roc_data']['fpr']:
-    rf_mean_auc = plot_roc_curves(rf_metrics['roc_data'], "Random Forest", results_dir)
+    rf_mean_auc = plot_roc_curves(rf_metrics['roc_data'], "Decision Tree", results_dir)
     linear_mean_auc = plot_roc_curves(linear_metrics['roc_data'], "Logistic Regression", results_dir)
     xgboost_mean_auc = plot_roc_curves(xgboost_metrics['roc_data'], "xgboost", results_dir)
     plot_combined_roc(rf_metrics['roc_data'], linear_metrics['roc_data'], xgboost_metrics['roc_data'], results_dir)
 
 # Plot feature importance
 print(f"\n GENERATING FEATURE IMPORTANCE PLOTS...")
-plot_feature_importance(rf_feature_importances, X.columns, "Random Forest", results_dir)
+plot_feature_importance(rf_feature_importances, X.columns, "Decision Tree", results_dir)
 
 
 # Final summary
@@ -599,7 +601,7 @@ print(" FINAL COMPARISON SUMMARY")
 print("="*70)
 
 print(f"\n FINAL MODEL COMPARISON:")
-print(f"{'Metric':<15} {'Random Forest':<15} {'Logistic Regression':<15}")
+print(f"{'Metric':<15} {'Decision Tree':<15} {'Logistic Regression':<15}")
 print(f"{'-'*50}")
 print(f"{'Accuracy':<15} {np.mean(rf_metrics['accuracy']):<15.4f} {np.mean(linear_metrics['accuracy']):<15.4f}")
 print(f"{'Precision':<15} {np.mean(rf_metrics['precision']):<15.4f} {np.mean(linear_metrics['precision']):<15.4f}")
@@ -620,8 +622,8 @@ print("\n FINAL TRAINING ON FULL DATASET WITH BEST PARAMETERS")
 xgboost_model = xgboostClassifier(**xgboost_best_params, random_state=42, verbose=0)
 xgboost_model.fit(X, y)
 
-# Train Random Forest with best params
-rf_model = RandomForestClassifier(**rf_best_params, random_state=42)
+# Train Decision Tree with best params
+rf_model = DecisionTreeClassifier(**rf_best_params, random_state=42)
 rf_model.fit(X, y)
 
 # Train Logistic Regression with best params
@@ -631,7 +633,7 @@ linear_model.fit(X, y)
 # Create a voting classifier
 voting_clf = VotingClassifier(estimators=[
     ('xgboost', xgboost_model),
-    ('random_forest', rf_model),
+    ('decision_tree', rf_model),
     ('logistic_regression', linear_model)
 ], voting='soft')
 
@@ -651,7 +653,7 @@ linear_params = linear_best_params
 voting_params_list = [
     {
         'xgboost': xgboost_params,
-        'random_forest': rf_params,
+        'decision_tree': rf_params,
         'logistic_regression': linear_params
     }
 ]
@@ -664,7 +666,7 @@ plot_roc_curves(voting_metrics['roc_data'], "Voting Classifier", results_dir)
 #Use joblist to save the other models as well
 xgboost_model_path = os.path.join(results_dir, "xgboost_model.pkl")
 joblib.dump(xgboost_model, xgboost_model_path)
-rf_model_path = os.path.join(results_dir, "random_forest_model.pkl")
+rf_model_path = os.path.join(results_dir, "decision_tree_model.pkl")
 joblib.dump(rf_model, rf_model_path)
 linear_model_path = os.path.join(results_dir, "logistic_regression_model.pkl")
 joblib.dump(linear_model, linear_model_path)
