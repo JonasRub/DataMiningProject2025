@@ -3,8 +3,10 @@
 #TODO: Add better parameter searching, maybe grid search
 #Implement voting system: Done
 # What does 'C': 0.1, 'penalty': 'l1' mean, remove if bad: Ok not good or bad, just different regularization, can fix using grid search
+#TODO: Add another simple baseline model
 #Add feature importance for logistic regression and catboost: Done, hopefully there is no mixup of coefficients?
 #TODO: Increase folds when all other tasks are done (2,2) at the moment for testing speed
+#TODO:XGBosst and Decision Tree add
 
 import warnings
 warnings.filterwarnings("ignore")
@@ -13,14 +15,16 @@ import pandas as pd
 import numpy as np
 import os
 import matplotlib.pyplot as plt
-from sklearn.model_selection import KFold, ParameterGrid
+from sklearn.model_selection import KFold
 from sklearn.base import clone
 from sklearn.metrics import accuracy_score, f1_score, roc_curve, auc, precision_score, recall_score, classification_report, confusion_matrix
 from sklearn.ensemble import RandomForestClassifier, VotingClassifier
 from sklearn.linear_model import LogisticRegression
-from catboost import CatBoostClassifier
+from xgboost import XGBClassifier as xgboostClassifier
 import joblib # For saving models
+
 from sklearn.preprocessing import StandardScaler
+
 from helper_KMv2 import get_preprocessor, dataCleaning #MMO
 
 # Baseline model function
@@ -390,7 +394,7 @@ def plot_feature_importance(feature_importances, feature_names, model_name, save
     
     return importance_df
 
-def plot_metrics_comparison(rf_metrics, linear_metrics, catboost_metrics, baseline_accuracy, save_dir):
+def plot_metrics_comparison(rf_metrics, linear_metrics, xgboost_metrics, baseline_accuracy, save_dir):
     """Plot comparison of metrics between models and save to file"""
     metrics_names = ['Accuracy', 'Precision', 'Recall', 'F1-Score']
     rf_means = [
@@ -405,11 +409,11 @@ def plot_metrics_comparison(rf_metrics, linear_metrics, catboost_metrics, baseli
         np.mean(linear_metrics['recall']),
         np.mean(linear_metrics['f1'])
     ]
-    catboost_means = [
-        np.mean(catboost_metrics['accuracy']),
-        np.mean(catboost_metrics['precision']),
-        np.mean(catboost_metrics['recall']),
-        np.mean(catboost_metrics['f1'])
+    xgboost_means = [
+        np.mean(xgboost_metrics['accuracy']),
+        np.mean(xgboost_metrics['precision']),
+        np.mean(xgboost_metrics['recall']),
+        np.mean(xgboost_metrics['f1'])
     ]
     baseline_means = [baseline_accuracy, 0, 0, 0]
 
@@ -419,7 +423,7 @@ def plot_metrics_comparison(rf_metrics, linear_metrics, catboost_metrics, baseli
     fig, ax = plt.subplots(figsize=(16, 6))
     rects1 = ax.bar(x - 1.5*width, rf_means, width, label='Random Forest', alpha=0.8, color='skyblue')
     rects2 = ax.bar(x - 0.5*width, linear_means, width, label='Logistic Regression', alpha=0.8, color='lightcoral')
-    rects3 = ax.bar(x + 0.5*width, catboost_means, width, label='CatBoost', alpha=0.8, color='lightgreen')
+    rects3 = ax.bar(x + 0.5*width, xgboost_means, width, label='xgboost', alpha=0.8, color='lightgreen')
     rects4 = ax.bar(x + 1.5*width, baseline_means, width, label='Baseline', alpha=0.8, color='grey')
     
     ax.set_xlabel('Metrics')
@@ -452,7 +456,7 @@ def plot_metrics_comparison(rf_metrics, linear_metrics, catboost_metrics, baseli
     
     print(f"    Saved metrics comparison: {filepath}")
 
-def plot_combined_roc(rf_roc_data, linear_roc_data, catboost_roc_data, save_dir):
+def plot_combined_roc(rf_roc_data, linear_roc_data, xgboost_roc_data, save_dir):
     """Plot both models' ROC curves on the same plot and save"""
     plt.figure(figsize=(12, 8))
     
@@ -472,12 +476,12 @@ def plot_combined_roc(rf_roc_data, linear_roc_data, catboost_roc_data, save_dir)
     mean_tpr_lr /= len(linear_roc_data['fpr'])
     mean_auc_lr = auc(mean_fpr_lr, mean_tpr_lr)
 
-    # Calculate mean ROC for CatBoost
+    # Calculate mean ROC for xgboost
     mean_fpr_cb = np.linspace(0, 1, 100)
     mean_tpr_cb = np.zeros_like(mean_fpr_cb)
-    for fpr, tpr in zip(catboost_roc_data['fpr'], catboost_roc_data['tpr']):
+    for fpr, tpr in zip(xgboost_roc_data['fpr'], xgboost_roc_data['tpr']):
         mean_tpr_cb += np.interp(mean_fpr_cb, fpr, tpr)
-    mean_tpr_cb /= len(catboost_roc_data['fpr'])
+    mean_tpr_cb /= len(xgboost_roc_data['fpr'])
     mean_auc_cb = auc(mean_fpr_cb, mean_tpr_cb)
 
     # Plot mean ROC curves
@@ -486,7 +490,7 @@ def plot_combined_roc(rf_roc_data, linear_roc_data, catboost_roc_data, save_dir)
     plt.plot(mean_fpr_lr, mean_tpr_lr, color='red', lw=3,
              label=f'Logistic Regression (AUC = {mean_auc_lr:.3f})')
     plt.plot(mean_fpr_cb, mean_tpr_cb, color='green', lw=3,
-             label=f'CatBoost (AUC = {mean_auc_cb:.3f})')
+             label=f'xgboost (AUC = {mean_auc_cb:.3f})')
     
     # Plot diagonal
     plt.plot([0, 1], [0, 1], color='navy', lw=2, linestyle='--', alpha=0.5)
@@ -510,45 +514,38 @@ def plot_combined_roc(rf_roc_data, linear_roc_data, catboost_roc_data, save_dir)
     return mean_auc_rf, mean_auc_lr, mean_auc_cb
 
 # Define parameter sets
-rf_param_grid = {
-    'n_estimators': [50, 100, 150],
-    'max_depth': [10, 15, None],
-    'min_samples_split': [2, 5, 10]
-}
-
-linear_param_grid = {
-    'C': [ 0.1, 1.0, 10.0],
-    'penalty': ['l2'],
-    'solver': ['liblinear', 'newton-cholesky']
-}
+rf_params_list = [
+    {'n_estimators': 50, 'max_depth': None, 'min_samples_split': 2},
+    {'n_estimators': 100, 'max_depth': 10, 'min_samples_split': 5,}
+]
 
 
-catboost_param_grid = {
-    'iterations': [100, 200],
-    'depth': [ 5, 6, 8, 10],
-    'learning_rate': [ 0.05, 0.01, 0.1],
-    'l2_leaf_reg': [ 3, 5]
-}
+linear_params_list = [
+    {'C': 0.1, 'penalty': 'l2', 'solver': 'liblinear'},
+    {'C': 1.0, 'penalty': 'l2', 'solver': 'liblinear'}
+]
 
-rf_params_list = list(ParameterGrid(rf_param_grid))
-linear_params_list = list(ParameterGrid(linear_param_grid))
-catboost_params_list = list(ParameterGrid(catboost_param_grid))
+xgboost_params_list = [
+    {'max_depth': 6, 'learning_rate': 0.2},
+    {'max_depth': 8, 'learning_rate': 0.05}
+]
+#add more params for xgboost, other variables etc
 
 # Initialize models
 rf_model = RandomForestClassifier(random_state=42)
 linear_model = LogisticRegression(random_state=42, max_iter=1000)
-catboost_model = CatBoostClassifier(random_state=42, verbose=0)
+xgboost_model = xgboostClassifier()
 
 print(" STARTING NESTED CROSS-VALIDATION FOR BOTH MODELS")
 print("="*70)
 
 
-# Train Catboost
-catboost_model = CatBoostClassifier(random_state=42, verbose=0)
-catboost_mean_score, catboost_fold_scores, catboost_best_params, catboost_metrics, catboost_feature_importances = nested_cross_validation_with_metrics(
-    catboost_model, catboost_params_list, X, y, outer_folds=2, inner_folds=2, model_name="CATBOOST"
+# Train xgboost
+xgboost_model = xgboostClassifier(random_state=42, verbose=0)
+xgboost_mean_score, xgboost_fold_scores, xgboost_best_params, xgboost_metrics, xgboost_feature_importances = nested_cross_validation_with_metrics(
+    xgboost_model, xgboost_params_list, X, y, outer_folds=2, inner_folds=2, model_name="xgboost"
 )
-plot_feature_importance(catboost_feature_importances, X.columns, "CatBoost", results_dir)
+plot_feature_importance(xgboost_feature_importances, X.columns, "xgboost", results_dir)
 
 
 
@@ -582,14 +579,14 @@ print(f"\n GENERATING AND SAVING PLOTS...")
 print(f"    Saving to: {results_dir}")
 
 # Plot metrics comparison
-plot_metrics_comparison(rf_metrics, linear_metrics, catboost_metrics, baseline_accuracy, results_dir)
+plot_metrics_comparison(rf_metrics, linear_metrics, xgboost_metrics, baseline_accuracy, results_dir)
 
 # Plot ROC curves if binary classification
 if rf_metrics['roc_data']['fpr']:
     rf_mean_auc = plot_roc_curves(rf_metrics['roc_data'], "Random Forest", results_dir)
     linear_mean_auc = plot_roc_curves(linear_metrics['roc_data'], "Logistic Regression", results_dir)
-    catboost_mean_auc = plot_roc_curves(catboost_metrics['roc_data'], "CatBoost", results_dir)
-    plot_combined_roc(rf_metrics['roc_data'], linear_metrics['roc_data'], catboost_metrics['roc_data'], results_dir)
+    xgboost_mean_auc = plot_roc_curves(xgboost_metrics['roc_data'], "xgboost", results_dir)
+    plot_combined_roc(rf_metrics['roc_data'], linear_metrics['roc_data'], xgboost_metrics['roc_data'], results_dir)
 
 # Plot feature importance
 print(f"\n GENERATING FEATURE IMPORTANCE PLOTS...")
@@ -619,9 +616,9 @@ print(f" All results saved in: {results_dir}/")
 # and add a voter system that uses all three models to make a final prediction.
 print("\n FINAL TRAINING ON FULL DATASET WITH BEST PARAMETERS")
 
-# Train CatBoost with best params
-catboost_model = CatBoostClassifier(**catboost_best_params, random_state=42, verbose=0)
-catboost_model.fit(X, y)
+# Train xgboost with best params
+xgboost_model = xgboostClassifier(**xgboost_best_params, random_state=42, verbose=0)
+xgboost_model.fit(X, y)
 
 # Train Random Forest with best params
 rf_model = RandomForestClassifier(**rf_best_params, random_state=42)
@@ -633,7 +630,7 @@ linear_model.fit(X, y)
 
 # Create a voting classifier
 voting_clf = VotingClassifier(estimators=[
-    ('catboost', catboost_model),
+    ('xgboost', xgboost_model),
     ('random_forest', rf_model),
     ('logistic_regression', linear_model)
 ], voting='soft')
@@ -646,14 +643,14 @@ print(" Final models trained and voting classifier created.")
 voting_model_path = os.path.join(results_dir, "voting_classifier_model.pkl")
 joblib.dump(voting_clf, voting_model_path)
 
-# Evaluate voting classifier with nested CV, but I need parameters for catboost, rf, and linear
-catboost_params = catboost_best_params
+# Evaluate voting classifier with nested CV, but I need parameters for xgboost, rf, and linear
+xgboost_params = xgboost_best_params
 rf_params = rf_best_params
 linear_params = linear_best_params
 
 voting_params_list = [
     {
-        'catboost': catboost_params,
+        'xgboost': xgboost_params,
         'random_forest': rf_params,
         'logistic_regression': linear_params
     }
@@ -665,8 +662,8 @@ voting_mean_score, voting_fold_scores, voting_best_params, voting_metrics, votin
 plot_roc_curves(voting_metrics['roc_data'], "Voting Classifier", results_dir)
 
 #Use joblist to save the other models as well
-catboost_model_path = os.path.join(results_dir, "catboost_model.pkl")
-joblib.dump(catboost_model, catboost_model_path)
+xgboost_model_path = os.path.join(results_dir, "xgboost_model.pkl")
+joblib.dump(xgboost_model, xgboost_model_path)
 rf_model_path = os.path.join(results_dir, "random_forest_model.pkl")
 joblib.dump(rf_model, rf_model_path)
 linear_model_path = os.path.join(results_dir, "logistic_regression_model.pkl")
