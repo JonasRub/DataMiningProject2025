@@ -78,71 +78,6 @@ class dataCleaning(BaseEstimator, TransformerMixin):
         return df
 
 
-class HighCorrelationDropper(BaseEstimator, TransformerMixin):
-    """
-    Drops features with high correlation (>0.7) by keeping the one
-    most correlated with the target variable (smoking column in y).
-    """
-    
-    def __init__(self, threshold=0.7, target_column='smoking'):
-        self.threshold = threshold
-        self.target_column = target_column
-        self.features_to_drop_ = None
-    
-    def fit(self, X, y=None):
-        """Find which features to drop based on correlation."""
-        if y is None:
-            raise ValueError("y (target DataFrame) is required for fitting")
-        
-        df = pd.DataFrame(X) if not isinstance(X, pd.DataFrame) else X.copy()
-        
-        # Extract smoking column from y
-        y_df = pd.DataFrame(y) if not isinstance(y, pd.DataFrame) else y
-        
-        if self.target_column not in y_df.columns:
-            raise ValueError(f"Target column '{self.target_column}' not found in y")
-        
-        smoking_series = y_df[self.target_column].reset_index(drop=True)
-        
-        # Compute correlation matrix for features
-        corr_matrix = df.corr().abs()
-        
-        # Compute correlation of each feature with smoking
-        target_corr = df.corrwith(smoking_series).abs()
-        
-        # Find high correlation pairs
-        self.features_to_drop_ = set()
-        
-        for i in range(len(corr_matrix.columns)):
-            for j in range(i + 1, len(corr_matrix.columns)):
-                col_i = corr_matrix.columns[i]
-                col_j = corr_matrix.columns[j]
-                
-                # Check if correlation is high
-                if corr_matrix.iloc[i, j] > self.threshold:
-                    # Drop the one with lower correlation to smoking
-                    if target_corr[col_i] < target_corr[col_j]:
-                        self.features_to_drop_.add(col_i)
-                    else:
-                        self.features_to_drop_.add(col_j)
-        
-        self.features_to_drop_ = list(self.features_to_drop_)
-        return self
-    
-    def transform(self, X):
-        """Drop the identified features."""
-        df = pd.DataFrame(X) if not isinstance(X, pd.DataFrame) else X.copy()
-        
-        # Drop only features that exist in the dataframe
-        cols_to_drop = [col for col in self.features_to_drop_ if col in df.columns]
-        
-        return df.drop(columns=cols_to_drop)
-    
-    def fit_transform(self, X, y=None):
-        """Fit and transform in one step."""
-        return self.fit(X, y).transform(X)
-
-
 groups = {
     'Physical': ['height_cm', 'weight_kg', 'waist_cm'],
     'Vision': ['eyesight_left', 'eyesight_right'],
@@ -510,10 +445,115 @@ class KidneyOutlier(BaseEstimator, TransformerMixin):
         return np.append(input_features, 'kidney_outlier_flag')
 
 
-def get_preprocessor():
+class DropColumns(BaseEstimator, TransformerMixin):
+    """
+    Transformer that drops specified columns from a pandas DataFrame.
+
+    Usage:
+        DropColumns(columns=['col1', 'col2'])
+
+    Notes:
+    - If a column in `columns` is not present in X, it is ignored.
+    - If X is a numpy array, the transformer will return X unchanged
+      (Column names are required to drop by name).
+    """
+    def __init__(self, columns=None):
+        self.columns = list(columns) if columns is not None else []
+
+    def fit(self, X, y=None):
+        return self
+
+    def transform(self, X):
+        # Operates on pandas DataFrame inputs. If X is numpy array, return unchanged.
+        if isinstance(X, np.ndarray):
+            return X
+
+        df = X.copy()
+        to_drop = [c for c in self.columns if c in df.columns]
+        if len(to_drop) == 0:
+            return df
+        return df.drop(columns=to_drop)
+
+    def get_feature_names_out(self, input_features=None):
+        if input_features is None:
+            return np.array([])
+        return np.array([f for f in input_features if f not in self.columns])
+
+
+class ColumnTransformerWithDrop(BaseEstimator, TransformerMixin):
+    """
+    Wrap a ColumnTransformer and perform a final drop of specified output feature names.
+
+    This ensures that dropping happens after all ColumnTransformer transforms.
+    """
+    def __init__(self, column_transformer, drop_columns=None):
+        self.column_transformer = column_transformer
+        self.drop_columns = list(drop_columns) if drop_columns is not None else []
+        self._drop_indices = None
+
+    def fit(self, X, y=None):
+        # Fit the underlying ColumnTransformer
+        self.column_transformer.fit(X, y)
+
+        # Determine output feature names
+        try:
+            input_features = list(X.columns) if hasattr(X, 'columns') else None
+            out_names = self.column_transformer.get_feature_names_out(input_features)
+        except Exception:
+            # Fallback: if get_feature_names_out not available, assume no names
+            out_names = None
+
+        # Compute indices to drop based on names
+        if out_names is not None and len(self.drop_columns) > 0:
+            self._drop_indices = [i for i, n in enumerate(out_names) if n in self.drop_columns]
+        else:
+            self._drop_indices = []
+
+        return self
+
+    def transform(self, X):
+        Xt = self.column_transformer.transform(X)
+
+        # If nothing to drop, return Xt unchanged
+        if not self._drop_indices:
+            return Xt
+
+        # Drop columns by index from numpy array
+        try:
+            Xt_dropped = np.delete(Xt, self._drop_indices, axis=1)
+        except Exception:
+            # If Xt is DataFrame-like, try DataFrame drop
+            if hasattr(Xt, 'drop'):
+                # get names then drop
+                try:
+                    input_features = list(X.columns) if hasattr(X, 'columns') else None
+                    out_names = self.column_transformer.get_feature_names_out(input_features)
+                    to_drop = [out_names[i] for i in self._drop_indices]
+                    Xt_dropped = Xt.drop(columns=to_drop, errors='ignore')
+                except Exception:
+                    return Xt
+            else:
+                return Xt
+
+        return Xt_dropped
+
+    def get_feature_names_out(self, input_features=None):
+        # delegate to underlying transformer and filter dropped names
+        try:
+            out_names = self.column_transformer.get_feature_names_out(input_features)
+            return np.array([n for n in out_names if n not in self.drop_columns])
+        except Exception:
+            return np.array([])
+
+
+def get_preprocessor(drop_columns=None):
     """
     Build and return the full preprocessing pipeline (ColumnTransformer)
     combining all feature-group specific transformers.
+
+    Parameters
+    - drop_columns: optional list of column names to drop. If provided,
+      these columns are removed via ColumnTransformer's built-in 'drop'.
     """
     # Vision
     vision_pipe = Pipeline([
@@ -565,8 +605,9 @@ def get_preprocessor():
         ('kidney_outlier', KidneyOutlier())
     ])
 
-    # ColumnTransformer 통합
-    preprocessor = ColumnTransformer([
+    # Build list of (name, transformer, columns) entries
+    preproc_list = []
+    preproc_list.extend([
         ('vision', vision_pipe, ['eyesight_left', 'eyesight_right']),
         ('physical', physical_pipe, ['height_cm', 'weight_kg', 'waist_cm']),
         ('blood_pressure', bp_pipe, ['systolic', 'relaxation']),
@@ -574,14 +615,17 @@ def get_preprocessor():
         ('lipid', lipid_pipe, ['cholesterol', 'triglyceride', 'hdl', 'ldl']),
         ('liver', liver_pipe, ['ast', 'alt', 'gtp']),
         ('kidney', kidney_pipe, ['hemoglobin', 'serum_creatinine'])
-    ], remainder='passthrough',
-       verbose_feature_names_out=False,
-       force_int_remainder_cols=False
-       )
-    
-    # Wrap in a full pipeline with correlation dropper
-    full_pipeline = Pipeline([
-        ('column_transformer', column_transformer),
-        ('correlation_dropper', HighCorrelationDropper(threshold=0.7, target_column='smoking'))
     ])
-    return preprocessor
+
+    preprocessor_ct = ColumnTransformer(preproc_list,
+                                        remainder='passthrough',
+                                        verbose_feature_names_out=False,
+                                        force_int_remainder_cols=False)
+
+    # Hardcoded list of columns to drop as the LAST step (user requested).
+    drop_cols = ['height(cm)']
+
+    # Wrap the ColumnTransformer so dropping happens after all transforms
+    if drop_cols:
+        return ColumnTransformerWithDrop(preprocessor_ct, drop_columns=drop_cols)
+    return preprocessor_ct
