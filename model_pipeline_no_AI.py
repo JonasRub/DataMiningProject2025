@@ -15,7 +15,7 @@ import pandas as pd
 import numpy as np
 import os
 import matplotlib.pyplot as plt
-from sklearn.model_selection import KFold
+from sklearn.model_selection import KFold, ParameterGrid
 from sklearn.base import clone
 from sklearn.metrics import accuracy_score, f1_score, roc_curve, auc, precision_score, recall_score, classification_report, confusion_matrix
 from sklearn.ensemble import RandomForestClassifier, VotingClassifier
@@ -65,7 +65,7 @@ def nested_cross_validation_with_metrics(model, params_list, X, y, outer_folds=5
     best_overall_params = None  # Store the single best parameter set
     best_overall_score = -1  # Track the best score across all folds
     all_feature_importances = []
-    
+    feature_names = []
     # Store comprehensive metrics
     metrics_data = {
         'accuracy': [],
@@ -199,6 +199,9 @@ def nested_cross_validation_with_metrics(model, params_list, X, y, outer_folds=5
 
         X_train_prep =  preprocessor.fit_transform(X_train_clean)
         X_test_prep = preprocessor.transform(X_test_clean)
+        
+        if not feature_names:
+            feature_names = preprocessor.get_feature_names_out().tolist()
         #MMO
         
         if model_name == 'LOGISTIC REGRESSION':
@@ -297,7 +300,7 @@ def nested_cross_validation_with_metrics(model, params_list, X, y, outer_folds=5
             row += f" {metrics_data['roc_data']['roc_auc'][i]:<10.4f}"
         print(row)
     
-    return mean_score, outer_scores, best_overall_params, metrics_data, all_feature_importances
+    return mean_score, outer_scores, best_overall_params, metrics_data, all_feature_importances, feature_names
 
 def plot_roc_curves(roc_data, model_name, save_dir):
     """Plot ROC curves for all folds and save to file"""
@@ -395,7 +398,7 @@ def plot_feature_importance(feature_importances, feature_names, model_name, save
     
     return importance_df
 
-def plot_metrics_comparison(rf_metrics, linear_metrics, xgboost_metrics, baseline_accuracy, save_dir):
+def plot_metrics_comparison(rf_metrics, dt_metrics, linear_metrics, xgboost_metrics, baseline_accuracy, save_dir):
     """Plot comparison of metrics between models and save to file"""
     metrics_names = ['Accuracy', 'Precision', 'Recall', 'F1-Score']
     rf_means = [
@@ -403,6 +406,12 @@ def plot_metrics_comparison(rf_metrics, linear_metrics, xgboost_metrics, baselin
         np.mean(rf_metrics['precision']),
         np.mean(rf_metrics['recall']),
         np.mean(rf_metrics['f1'])
+    ]
+    dt_metrics = [
+        np.mean(dt_metrics['accuracy']),
+        np.mean(dt_metrics['precision']),
+        np.mean(dt_metrics['recall']),
+        np.mean(dt_metrics['f1'])
     ]
     linear_means = [
         np.mean(linear_metrics['accuracy']),
@@ -419,13 +428,14 @@ def plot_metrics_comparison(rf_metrics, linear_metrics, xgboost_metrics, baselin
     baseline_means = [baseline_accuracy, 0, 0, 0]
 
     x = np.arange(len(metrics_names))
-    width = 0.25
+    width = 0.15
     
     fig, ax = plt.subplots(figsize=(16, 6))
-    rects1 = ax.bar(x - 1.5*width, rf_means, width, label='Decision Tree', alpha=0.8, color='skyblue')
-    rects2 = ax.bar(x - 0.5*width, linear_means, width, label='Logistic Regression', alpha=0.8, color='lightcoral')
-    rects3 = ax.bar(x + 0.5*width, xgboost_means, width, label='xgboost', alpha=0.8, color='lightgreen')
-    rects4 = ax.bar(x + 1.5*width, baseline_means, width, label='Baseline', alpha=0.8, color='grey')
+    rects5 = ax.bar(x - 2*width, dt_metrics, width, label= 'Decision Tree', alpha=0.8, color='Pink')
+    rects1 = ax.bar(x - width, rf_means, width, label= 'Random Forest', alpha=0.8, color='skyblue')
+    rects2 = ax.bar(x , linear_means, width, label='Logistic Regression', alpha=0.8, color='lightcoral')
+    rects3 = ax.bar(x + width, xgboost_means, width, label='xgboost', alpha=0.8, color='lightgreen')
+    rects4 = ax.bar(x + 2*width, baseline_means, width, label='Baseline', alpha=0.8, color='grey')
     
     ax.set_xlabel('Metrics')
     ax.set_ylabel('Scores')
@@ -436,7 +446,7 @@ def plot_metrics_comparison(rf_metrics, linear_metrics, xgboost_metrics, baselin
     ax.set_ylim(0, 1)
     
     # Add value labels on bars
-    for rect in rects1 + rects2 + rects3 + rects4:
+    for rect in rects5 + rects1 + rects2 + rects3 + rects4:
         height = rect.get_height()
         if height == 0:
             continue
@@ -457,17 +467,25 @@ def plot_metrics_comparison(rf_metrics, linear_metrics, xgboost_metrics, baselin
     
     print(f"    Saved metrics comparison: {filepath}")
 
-def plot_combined_roc(rf_roc_data, linear_roc_data, xgboost_roc_data, save_dir):
+def plot_combined_roc(rf_roc_data, dt_roc_data, linear_roc_data, xgboost_roc_data, save_dir):
     """Plot both models' ROC curves on the same plot and save"""
     plt.figure(figsize=(12, 8))
     
-    # Calculate mean ROC for Decision Tree
+    # Calculate mean ROC for Random Forest
     mean_fpr_rf = np.linspace(0, 1, 100)
     mean_tpr_rf = np.zeros_like(mean_fpr_rf)
     for fpr, tpr in zip(rf_roc_data['fpr'], rf_roc_data['tpr']):
         mean_tpr_rf += np.interp(mean_fpr_rf, fpr, tpr)
     mean_tpr_rf /= len(rf_roc_data['fpr'])
     mean_auc_rf = auc(mean_fpr_rf, mean_tpr_rf)
+
+    # Calculate mean ROC for Decision Tree
+    mean_fpr_dt = np.linspace(0, 1, 100)
+    mean_tpr_dt = np.zeros_like(mean_fpr_rf)
+    for fpr, tpr in zip(dt_roc_data['fpr'], dt_roc_data['tpr']):
+        mean_tpr_dt += np.interp(mean_fpr_dt, fpr, tpr)
+    mean_tpr_dt /= len(dt_roc_data['fpr'])
+    mean_auc_dt = auc(mean_fpr_dt, mean_tpr_dt)
     
     # Calculate mean ROC for Logistic Regression
     mean_fpr_lr = np.linspace(0, 1, 100)
@@ -486,8 +504,10 @@ def plot_combined_roc(rf_roc_data, linear_roc_data, xgboost_roc_data, save_dir):
     mean_auc_cb = auc(mean_fpr_cb, mean_tpr_cb)
 
     # Plot mean ROC curves
+    plt.plot(mean_fpr_dt, mean_tpr_dt, color='orange', lw=3,
+             label=f'Decision Tree (AUC = {mean_auc_dt:.3f})')
     plt.plot(mean_fpr_rf, mean_tpr_rf, color='blue', lw=3,
-             label=f'Decision Tree (AUC = {mean_auc_rf:.3f})')
+             label=f'Random Forest (AUC = {mean_auc_rf:.3f})')
     plt.plot(mean_fpr_lr, mean_tpr_lr, color='red', lw=3,
              label=f'Logistic Regression (AUC = {mean_auc_lr:.3f})')
     plt.plot(mean_fpr_cb, mean_tpr_cb, color='green', lw=3,
@@ -515,25 +535,44 @@ def plot_combined_roc(rf_roc_data, linear_roc_data, xgboost_roc_data, save_dir):
     return mean_auc_rf, mean_auc_lr, mean_auc_cb
 
 # Define parameter sets
-rf_params_list = [
-    { 'max_depth': None, 'min_samples_split': 2},
-    { 'max_depth': 10, 'min_samples_split': 5,}
-]
+rf_params_grid ={
+    'n_estimators': [100, 200, 300],
+     'max_depth': [5, 10, None], 
+     'min_samples_split': [2, 5]
+
+}
+
+dt_params_grid = {
+     'max_depth': [3, 5, 10, None], 
+     'min_samples_split': [2, 5, 10]
+
+}
 
 
-linear_params_list = [
-    {'C': 0.1, 'penalty': 'l2', 'solver': 'liblinear'},
-    {'C': 1.0, 'penalty': 'l2', 'solver': 'liblinear'}
-]
+linear_params_grid = {
+    'C': [0.01, 0.1, 1.0, 10], 
+     'penalty': ['l2'], 
+     'solver': ['liblinear']
+    
+}
 
-xgboost_params_list = [
-    {'max_depth': 6, 'learning_rate': 0.2},
-    {'max_depth': 8, 'learning_rate': 0.05}
-]
+xgboost_params_grid = {
+    'max_depth': [4, 6, 8], 
+    'learning_rate': [0.05, 0.1, 0.2],
+    'subsample': [0.8, 1.0]
+}
+    
+
+rf_params_list = list(ParameterGrid(rf_params_grid))
+dt_params_list = list(ParameterGrid(dt_params_grid))
+linear_params_list = list(ParameterGrid(linear_params_grid))
+xgboost_params_list = list(ParameterGrid(xgboost_params_grid))
+
 #add more params for xgboost, other variables etc
 
 # Initialize models
-rf_model = DecisionTreeClassifier(random_state=42)
+rf_model = RandomForestClassifier(random_state=42)
+dt_model = DecisionTreeClassifier(random_state=42)
 linear_model = LogisticRegression(random_state=42, max_iter=1000)
 xgboost_model = xgboostClassifier()
 
@@ -543,31 +582,37 @@ print("="*70)
 
 # Train xgboost
 xgboost_model = xgboostClassifier(random_state=42, verbose=0)
-xgboost_mean_score, xgboost_fold_scores, xgboost_best_params, xgboost_metrics, xgboost_feature_importances = nested_cross_validation_with_metrics(
-    xgboost_model, xgboost_params_list, X, y, outer_folds=2, inner_folds=2, model_name="xgboost"
+xgboost_mean_score, xgboost_fold_scores, xgboost_best_params, xgboost_metrics, xgboost_feature_importances, feature_names = nested_cross_validation_with_metrics(
+    xgboost_model, xgboost_params_list, X, y, outer_folds=5, inner_folds=3, model_name="xgboost"
 )
-plot_feature_importance(xgboost_feature_importances, X.columns, "xgboost", results_dir)
+plot_feature_importance(xgboost_feature_importances, feature_names, "xgboost", results_dir)
 
 
 
 # Train Logistic Regression
-linear_mean_score, linear_fold_scores, linear_best_params, linear_metrics, linear_feature_importances = nested_cross_validation_with_metrics(
-    linear_model, linear_params_list, X, y, outer_folds=2, inner_folds=2, model_name="LOGISTIC REGRESSION"
+linear_mean_score, linear_fold_scores, linear_best_params, linear_metrics, linear_feature_importances, feature_names = nested_cross_validation_with_metrics(
+    linear_model, linear_params_list, X, y, outer_folds=5, inner_folds=3, model_name="LOGISTIC REGRESSION"
 )
 
 print(f"    Note: Logistic Regression feature importance based on coefficients")
 coef_importances = np.mean(np.abs(linear_feature_importances), axis=0)
-plot_feature_importance([coef_importances], X.columns, "Logistic Regression", results_dir)
+plot_feature_importance([coef_importances], feature_names, "Logistic Regression", results_dir)
 
 
-
+# Train Random Forest
+rf_mean_score, rf_fold_scores, rf_best_params, rf_metrics, rf_feature_importances, feature_names = nested_cross_validation_with_metrics(
+    rf_model, rf_params_list, X, y, outer_folds=5, inner_folds=3, model_name="RANDOM FOREST"
+)
+plot_feature_importance(rf_feature_importances, feature_names, "Random Forest", results_dir)
 
 
 
 # Train Decision Tree
-rf_mean_score, rf_fold_scores, rf_best_params, rf_metrics, rf_feature_importances = nested_cross_validation_with_metrics(
-    rf_model, rf_params_list, X, y, outer_folds=2, inner_folds=2, model_name="Decision Tree"
+dt_mean_score, dt_fold_scores, dt_best_params, dt_metrics, dt_feature_importances, feature_names = nested_cross_validation_with_metrics(
+    dt_model, dt_params_list, X, y, outer_folds=5, inner_folds=3, model_name="Decision Tree"
 )
+plot_feature_importance(dt_feature_importances, feature_names, "Decision Tree", results_dir)
+
 
 print("\n" + "="*70)
 
@@ -580,18 +625,15 @@ print(f"\n GENERATING AND SAVING PLOTS...")
 print(f"    Saving to: {results_dir}")
 
 # Plot metrics comparison
-plot_metrics_comparison(rf_metrics, linear_metrics, xgboost_metrics, baseline_accuracy, results_dir)
+plot_metrics_comparison(rf_metrics, dt_metrics, linear_metrics, xgboost_metrics, baseline_accuracy, results_dir)
 
 # Plot ROC curves if binary classification
-if rf_metrics['roc_data']['fpr']:
-    rf_mean_auc = plot_roc_curves(rf_metrics['roc_data'], "Decision Tree", results_dir)
+if dt_metrics['roc_data']['fpr']:
+    rf_mean_auc = plot_roc_curves(rf_metrics['roc_data'], "Random Forest", results_dir)
+    dt_mean_auc = plot_roc_curves(dt_metrics['roc_data'], "Decision Tree", results_dir)
     linear_mean_auc = plot_roc_curves(linear_metrics['roc_data'], "Logistic Regression", results_dir)
     xgboost_mean_auc = plot_roc_curves(xgboost_metrics['roc_data'], "xgboost", results_dir)
-    plot_combined_roc(rf_metrics['roc_data'], linear_metrics['roc_data'], xgboost_metrics['roc_data'], results_dir)
-
-# Plot feature importance
-print(f"\n GENERATING FEATURE IMPORTANCE PLOTS...")
-plot_feature_importance(rf_feature_importances, X.columns, "Decision Tree", results_dir)
+    plot_combined_roc(rf_metrics['roc_data'], dt_metrics['roc_data'], linear_metrics['roc_data'], xgboost_metrics['roc_data'], results_dir)
 
 
 # Final summary
@@ -602,13 +644,13 @@ print("="*70)
 print(f"\n FINAL MODEL COMPARISON:")
 print(f"{'Metric':<15} {'Decision Tree':<15} {'Logistic Regression':<15}")
 print(f"{'-'*50}")
-print(f"{'Accuracy':<15} {np.mean(rf_metrics['accuracy']):<15.4f} {np.mean(linear_metrics['accuracy']):<15.4f}")
-print(f"{'Precision':<15} {np.mean(rf_metrics['precision']):<15.4f} {np.mean(linear_metrics['precision']):<15.4f}")
-print(f"{'Recall':<15} {np.mean(rf_metrics['recall']):<15.4f} {np.mean(linear_metrics['recall']):<15.4f}")
-print(f"{'F1-Score':<15} {np.mean(rf_metrics['f1']):<15.4f} {np.mean(linear_metrics['f1']):<15.4f}")
+print(f"{'Accuracy':<15} {np.mean(dt_metrics['accuracy']):<15.4f} {np.mean(linear_metrics['accuracy']):<15.4f}")
+print(f"{'Precision':<15} {np.mean(dt_metrics['precision']):<15.4f} {np.mean(linear_metrics['precision']):<15.4f}")
+print(f"{'Recall':<15} {np.mean(dt_metrics['recall']):<15.4f} {np.mean(linear_metrics['recall']):<15.4f}")
+print(f"{'F1-Score':<15} {np.mean(dt_metrics['f1']):<15.4f} {np.mean(linear_metrics['f1']):<15.4f}")
 
-if rf_metrics['roc_data']['fpr']:
-    print(f"{'AUC':<15} {rf_mean_auc:<15.4f} {linear_mean_auc:<15.4f}")
+if dt_metrics['roc_data']['fpr']:
+    print(f"{'AUC':<15} {dt_mean_auc:<15.4f} {linear_mean_auc:<15.4f}")
 
 print(f"\n Nested Cross-Validation completed successfully!")
 print(f" All results saved in: {results_dir}/")
@@ -617,27 +659,14 @@ print(f" All results saved in: {results_dir}/")
 # and add a voter system that uses all three models to make a final prediction.
 print("\n FINAL TRAINING ON FULL DATASET WITH BEST PARAMETERS")
 
-# Train xgboost with best params
-xgboost_model = xgboostClassifier(**xgboost_best_params, random_state=42, verbose=0)
-xgboost_model.fit(X, y)
-
-# Train Decision Tree with best params
-rf_model = DecisionTreeClassifier(**rf_best_params, random_state=42)
-rf_model.fit(X, y)
-
-# Train Logistic Regression with best params
-linear_model = LogisticRegression(**linear_best_params, random_state=42, max_iter=1000)
-linear_model.fit(X, y)
-
 # Create a voting classifier
 voting_clf = VotingClassifier(estimators=[
-    ('xgboost', xgboost_model),
-    ('decision_tree', rf_model),
-    ('logistic_regression', linear_model)
+    ('xgboost', xgboostClassifier()),
+    ('decision_tree', DecisionTreeClassifier()),
+    ('random_forest', RandomForestClassifier()),
+    ('logistic_regression', LogisticRegression())
 ], voting='soft')
 
-# Train the voting classifier
-voting_clf.fit(X, y)
 print(" Final models trained and voting classifier created.")
 # Save the voting classifier
 
@@ -645,20 +674,44 @@ voting_model_path = os.path.join(results_dir, "voting_classifier_model.pkl")
 joblib.dump(voting_clf, voting_model_path)
 
 # Evaluate voting classifier with nested CV, but I need parameters for xgboost, rf, and linear
-xgboost_params = xgboost_best_params
-rf_params = rf_best_params
-linear_params = linear_best_params
+#xgboost_params = xgboost_best_params
+#rf_params = dt_best_params
+#linear_params = linear_best_params
+
+#voting_params_list = [
+#    {
+#        'xgboost': xgboost_params,
+ #       'decision_tree': rf_params,
+  #      'logistic_regression': linear_params
+  #  }
+#]
 
 voting_params_list = [
     {
-        'xgboost': xgboost_params,
-        'decision_tree': rf_params,
-        'logistic_regression': linear_params
+        # XGBoost best params
+        'xgboost__max_depth': xgboost_best_params['max_depth'],
+        'xgboost__learning_rate': xgboost_best_params['learning_rate'],
+
+        # Random Forest best params
+        'random_forest__n_estimators': rf_best_params['n_estimators'],
+        'random_forest__max_depth': rf_best_params['max_depth'],
+        'random_forest__min_samples_split': rf_best_params['min_samples_split'],
+
+        # Decision Tree best params
+        'decision_tree__max_depth': dt_best_params['max_depth'],
+        'decision_tree__min_samples_split': dt_best_params['min_samples_split'],
+
+        # Logistic Regression best params
+        'logistic_regression__C': linear_best_params['C'],
+        'logistic_regression__penalty': linear_best_params['penalty'],
+        'logistic_regression__solver': linear_best_params['solver'],
     }
 ]
 
-voting_mean_score, voting_fold_scores, voting_best_params, voting_metrics, voting_feature_importances = nested_cross_validation_with_metrics(
-    voting_clf, voting_params_list, X, y, outer_folds=2, inner_folds=2, model_name="VOTING CLASSIFIER"
+
+
+voting_mean_score, voting_fold_scores, voting_best_params, voting_metrics, voting_feature_importances, feature_names = nested_cross_validation_with_metrics(
+    voting_clf, voting_params_list, X, y, outer_folds=5, inner_folds=3, model_name="VOTING CLASSIFIER"
 )
 plot_roc_curves(voting_metrics['roc_data'], "Voting Classifier", results_dir)
 

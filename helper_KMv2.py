@@ -623,7 +623,7 @@ def get_preprocessor(drop_columns=None):
                                         force_int_remainder_cols=False)
 
     # Hardcoded list of columns to drop as the LAST step (user requested).
-    drop_cols = ['LDL','ALT','relaxation','height(cm)']
+    drop_cols = ['ldl','waist_cm','relaxation']
 
     # Wrap the ColumnTransformer so dropping happens after all transforms
     if drop_cols:
