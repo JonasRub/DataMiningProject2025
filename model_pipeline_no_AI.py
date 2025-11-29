@@ -23,10 +23,11 @@ from sklearn.linear_model import LogisticRegression
 from xgboost import XGBClassifier as xgboostClassifier
 import joblib # For saving models
 from sklearn.tree import DecisionTreeClassifier
+import seaborn as sns
 
 from sklearn.preprocessing import StandardScaler
 
-from helper_KMv2 import get_preprocessor, dataCleaning #MMO
+from helper_Modeling import get_preprocessor, dataCleaning #MMO
 
 # Baseline model function
 def baseline_model(input_data):
@@ -398,6 +399,30 @@ def plot_feature_importance(feature_importances, feature_names, model_name, save
     
     return importance_df
 
+def plot_mean_confusion_matrix(conf_matrices, model_name, save_dir):
+    mean_cm = np.mean(conf_matrices, axis=0)
+    mean_cm = np.floor(mean_cm).astype(int)
+
+    plt.figure(figsize=(6, 5))
+    sns.heatmap(
+        mean_cm,
+        annot=True,
+        fmt=".2f",
+        cmap="Blues",
+        xticklabels=["no", "yes"],
+        yticklabels=["no", "yes"]
+    )
+    plt.title(f"Mean Confusion Matrix – {model_name}")
+    plt.xlabel("Predicted label")
+    plt.ylabel("True label")
+    plt.tight_layout()
+
+    filename = f"{model_name.replace(' ', '_')}_Mean_Confusion_Matrix.png"
+    filepath = os.path.join(save_dir, filename)
+    plt.savefig(filepath, dpi=300, bbox_inches="tight")
+    plt.close()
+
+
 def plot_metrics_comparison(rf_metrics, dt_metrics, linear_metrics, xgboost_metrics, baseline_accuracy, save_dir):
     """Plot comparison of metrics between models and save to file"""
     metrics_names = ['Accuracy', 'Precision', 'Recall', 'F1-Score']
@@ -586,6 +611,7 @@ xgboost_mean_score, xgboost_fold_scores, xgboost_best_params, xgboost_metrics, x
     xgboost_model, xgboost_params_list, X, y, outer_folds=5, inner_folds=3, model_name="xgboost"
 )
 plot_feature_importance(xgboost_feature_importances, feature_names, "xgboost", results_dir)
+plot_mean_confusion_matrix(xgboost_metrics['confusion_matrices'], "xgboost", results_dir)
 
 
 
@@ -597,6 +623,7 @@ linear_mean_score, linear_fold_scores, linear_best_params, linear_metrics, linea
 print(f"    Note: Logistic Regression feature importance based on coefficients")
 coef_importances = np.mean(np.abs(linear_feature_importances), axis=0)
 plot_feature_importance([coef_importances], feature_names, "Logistic Regression", results_dir)
+plot_mean_confusion_matrix(linear_metrics['confusion_matrices'], "Logistic Regression", results_dir)
 
 
 # Train Random Forest
@@ -604,7 +631,7 @@ rf_mean_score, rf_fold_scores, rf_best_params, rf_metrics, rf_feature_importance
     rf_model, rf_params_list, X, y, outer_folds=5, inner_folds=3, model_name="RANDOM FOREST"
 )
 plot_feature_importance(rf_feature_importances, feature_names, "Random Forest", results_dir)
-
+plot_mean_confusion_matrix(rf_metrics['confusion_matrices'], "Random Forest", results_dir)
 
 
 # Train Decision Tree
@@ -612,6 +639,7 @@ dt_mean_score, dt_fold_scores, dt_best_params, dt_metrics, dt_feature_importance
     dt_model, dt_params_list, X, y, outer_folds=5, inner_folds=3, model_name="Decision Tree"
 )
 plot_feature_importance(dt_feature_importances, feature_names, "Decision Tree", results_dir)
+plot_mean_confusion_matrix(dt_metrics['confusion_matrices'], "Decision Tree", results_dir)
 
 
 print("\n" + "="*70)
